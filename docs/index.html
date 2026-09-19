@@ -77,7 +77,7 @@ li{margin:.3em 0}
 
 /* figures */
 figure{margin:26px auto}
-figcaption{font-family:var(--sans);font-size:13.5px;line-height:1.5;color:var(--muted);margin-top:10px;max-width:80ch}
+figcaption{font-family:var(--sans);font-size:13.5px;line-height:1.5;color:var(--muted);margin:12px auto 0;max-width:calc(68ch * 17 / 13.5)}
 figcaption b{color:var(--ink);font-weight:600}
 .scroll{overflow-x:auto}
 .slot{border:1.5px dashed var(--rule);border-radius:6px;min-height:170px;display:flex;flex-direction:column;justify-content:center;gap:6px;padding:22px;font-family:var(--sans);color:var(--muted);font-size:14px;background:repeating-linear-gradient(135deg,transparent 0 14px,var(--frozen-soft) 14px 15px)}
@@ -140,6 +140,7 @@ svg .mono{font-family:var(--mono);font-size:11px;fill:var(--muted)}
 .ln{fill:none;stroke:var(--ink);stroke-width:1.2;opacity:.8} .ln-ours{fill:none;stroke:var(--ours);stroke-width:1.5}
 .ln-sensor{fill:none;stroke:var(--sensor);stroke-width:1.5}
 .gate{fill:var(--surface);stroke:var(--ours);stroke-width:1.5}
+.gdot{fill:var(--ours)}
 
 footer{border-top:1px solid var(--rule);margin-top:40px;padding-block:26px 50px;font-family:var(--sans);font-size:13.5px;color:var(--muted)}
 .refs{font-family:var(--sans);font-size:13.5px;line-height:1.5;padding-left:1.4em}
@@ -322,7 +323,7 @@ pre{font-family:var(--mono);font-size:12.5px;background:var(--surface);border:1p
       <rect class="bx f-ours" x="400" y="0" width="16" height="16"/><text class="ts" x="424" y="13">added, zero-initialised</text>
       <rect class="bx f-sensor" x="580" y="0" width="16" height="16"/><text class="ts" x="604" y="13">sensor</text>
       <rect class="bx f-fit" x="670" y="0" width="16" height="16"/><text class="ts" x="694" y="13">closed form, no parameters</text>
-      <circle class="gate" cx="880" cy="8" r="8"/><text class="ts" x="875" y="12">⊙</text><text class="ts" x="896" y="13">gate, initialised to zero</text>
+      <circle class="gate" cx="880" cy="8" r="8"/><circle class="gdot" cx="880" cy="8" r="2.2"/><text class="ts" x="896" y="13">gate, initialised to zero</text>
     </g>
   </svg></div>
   <figcaption><b>Figure 1.</b> PromptMoGe. Grey and blue modules are MoGe‑3; green is what we add (3.1 M parameters on a 370 M model). One prompt map feeds three additive paths, each initialised so that the untrained model computes exactly the stock function: gated tokens before ViT blocks 0, 4 and 8, a gated pyramid into the five neck levels, and a residual channel in the refiner. Metric scale is attached outside the network by a closed-form fit.</figcaption>
@@ -577,7 +578,7 @@ pre{font-family:var(--mono);font-size:12.5px;background:var(--surface);border:1p
     var bx=x0+b*(w+gap)+w/2, gx=bx, gy=250;
     tg.appendChild(el("path",{d:"M"+(400+i*40)+" 296 V"+(272)+" H"+gx+" V"+(gy+9),"class":"ln-ours"}));
     tg.appendChild(el("circle",{cx:gx,cy:gy,r:9,"class":"gate"}));
-    tg.appendChild(el("text",{x:gx,y:gy+4,"text-anchor":"middle","class":"ts"},"⊙"));
+    tg.appendChild(el("circle",{cx:gx,cy:gy,r:2.2,"class":"gdot"}));
     tg.appendChild(el("path",{d:"M"+gx+" "+(gy-9)+" V126","class":"ln-ours","marker-end":"url(#ah)"}));
   });
   // neck levels + gates
@@ -588,7 +589,7 @@ pre{font-family:var(--mono);font-size:12.5px;background:var(--surface);border:1p
     var gx2=nx+15, gy2=250;
     ng.appendChild(el("path",{d:"M"+(640+l*30)+" 296 V"+(280-l*3)+" H"+gx2+" V"+(gy2+9),"class":"ln-ours"}));
     ng.appendChild(el("circle",{cx:gx2,cy:gy2,r:9,"class":"gate"}));
-    ng.appendChild(el("text",{x:gx2,y:gy2+4,"text-anchor":"middle","class":"ts"},"⊙"));
+    ng.appendChild(el("circle",{cx:gx2,cy:gy2,r:2.2,"class":"gdot"}));
     ng.appendChild(el("path",{d:"M"+gx2+" "+(gy2-9)+" V148","class":"ln-ours","marker-end":"url(#ah)"}));
   }
 
