@@ -1,0 +1,634 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>PromptMoGe</title>
+<meta name="description" content="Metric depth from one RGB frame and a phone LiDAR: LiDAR-prompted MoGe-3, compressed to run end to end on an iPad.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Serif:ital,wght@0,400;0,500;1,400&display=swap">
+<style>
+:root{
+  --bg:#F5F7F8; --surface:#FFFFFF; --ink:#12202B; --muted:#55626D; --rule:#D5DCE1;
+  --ours:#12806F; --ours-soft:#D8EEE9; --prior:#5B4B9A; --prior-soft:#E5E1F3;
+  --sensor:#A86B12; --sensor-soft:#F6E8CC; --tuned:#2B6CB0; --tuned-soft:#DCE9F6;
+  --frozen:#7C8892; --frozen-soft:#E6EAED;
+  --sans:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --serif:"IBM Plex Serif",Georgia,"Times New Roman",serif;
+  --mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0E151B; --surface:#152028; --ink:#E6EDF2; --muted:#9AA8B3; --rule:#26343F;
+    --ours:#3CC9B0; --ours-soft:#12352F; --prior:#A99BE6; --prior-soft:#2A2447;
+    --sensor:#E5B454; --sensor-soft:#3A2E12; --tuned:#6FB1F0; --tuned-soft:#14293D;
+    --frozen:#8795A1; --frozen-soft:#1E2A33;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0E151B; --surface:#152028; --ink:#E6EDF2; --muted:#9AA8B3; --rule:#26343F;
+  --ours:#3CC9B0; --ours-soft:#12352F; --prior:#A99BE6; --prior-soft:#2A2447;
+  --sensor:#E5B454; --sensor-soft:#3A2E12; --tuned:#6FB1F0; --tuned-soft:#14293D;
+  --frozen:#8795A1; --frozen-soft:#1E2A33;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+@media (prefers-reduced-motion: reduce){html{scroll-behavior:auto}}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--serif);font-size:17px;line-height:1.62;
+  padding-inline:20px;-webkit-font-smoothing:antialiased}
+a{color:var(--ours);text-decoration-thickness:1px;text-underline-offset:3px}
+a:focus-visible,button:focus-visible{outline:2px solid var(--ours);outline-offset:2px}
+.col{max-width:68ch;margin-inline:auto}
+.wide{max-width:1080px;margin-inline:auto}
+
+/* top bar */
+.bar{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);border-bottom:1px solid var(--rule);margin-inline:-20px;padding:10px 20px}
+.bar nav{max-width:1080px;margin-inline:auto;display:flex;gap:18px;flex-wrap:wrap;align-items:baseline;font-family:var(--sans);font-size:13.5px}
+.bar .name{font-weight:600;letter-spacing:.01em;color:var(--ink);text-decoration:none;margin-right:6px}
+.bar a{color:var(--muted);text-decoration:none}
+.bar a:hover{color:var(--ink)}
+
+/* header */
+header.hero{padding-block:56px 28px}
+.kicker{font-family:var(--mono);font-size:12.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+h1{font-family:var(--sans);font-weight:600;font-size:clamp(2rem,4.6vw,3.1rem);line-height:1.08;letter-spacing:-.015em;margin:.35em 0 .4em;text-wrap:balance}
+.lede{font-size:1.18rem;line-height:1.5;max-width:60ch;margin:0 0 22px}
+.links{display:flex;gap:10px;flex-wrap:wrap;font-family:var(--sans);font-size:14.5px}
+.links a{border:1px solid var(--rule);background:var(--surface);color:var(--ink);padding:7px 14px;border-radius:4px;text-decoration:none}
+.links a:hover{border-color:var(--ours)}
+.links a.soon{color:var(--muted);border-style:dashed}
+
+.facts{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:0;border-block:1px solid var(--rule);margin-block:34px 8px}
+.fact{padding:18px 18px 16px 0;border-right:1px solid var(--rule);margin-right:18px}
+.fact:last-child{border-right:0;margin-right:0}
+.fact b{display:block;font-family:var(--sans);font-weight:600;font-size:1.9rem;letter-spacing:-.02em;font-variant-numeric:tabular-nums;color:var(--ours)}
+.fact span{font-family:var(--sans);font-size:13.5px;line-height:1.4;color:var(--muted);display:block;margin-top:2px}
+
+/* text */
+section{padding-block:30px}
+h2{font-family:var(--sans);font-weight:600;font-size:1.55rem;letter-spacing:-.01em;margin:1.6em 0 .5em;text-wrap:balance}
+h3{font-family:var(--sans);font-weight:600;font-size:1.06rem;margin:1.7em 0 .35em}
+p{margin:.7em 0}
+.note{font-family:var(--sans);font-size:13.5px;line-height:1.5;color:var(--muted)}
+code,.num{font-family:var(--mono);font-size:.88em}
+ul{padding-left:1.15em}
+li{margin:.3em 0}
+.eq{font-family:var(--mono);font-size:14px;background:var(--surface);border:1px solid var(--rule);border-radius:4px;padding:10px 14px;overflow-x:auto;white-space:nowrap;margin:.9em 0}
+
+/* figures */
+figure{margin:26px auto}
+figcaption{font-family:var(--sans);font-size:13.5px;line-height:1.5;color:var(--muted);margin-top:10px;max-width:80ch}
+figcaption b{color:var(--ink);font-weight:600}
+.scroll{overflow-x:auto}
+.slot{border:1.5px dashed var(--rule);border-radius:6px;min-height:170px;display:flex;flex-direction:column;justify-content:center;gap:6px;padding:22px;font-family:var(--sans);color:var(--muted);font-size:14px;background:repeating-linear-gradient(135deg,transparent 0 14px,var(--frozen-soft) 14px 15px)}
+.slot b{color:var(--ink);font-weight:600}
+.slots{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px}
+
+/* tables */
+table{border-collapse:collapse;width:100%;font-family:var(--sans);font-size:14px;font-variant-numeric:tabular-nums;background:var(--surface)}
+.tw{border:1px solid var(--rule);border-radius:4px;overflow-x:auto;background:var(--surface)}
+th,td{padding:7px 12px;text-align:right;border-bottom:1px solid var(--rule);white-space:nowrap}
+th:first-child,td:first-child{text-align:left}
+td.l,th.l{text-align:left;white-space:normal}
+thead th{font-weight:600;font-size:12.5px;letter-spacing:.03em;text-transform:uppercase;color:var(--muted);background:var(--bg)}
+tbody tr:last-child td{border-bottom:0}
+tr.ours td{background:var(--ours-soft)}
+tr.ours td:first-child{font-weight:600}
+tr.grp td{font-size:12.5px;letter-spacing:.03em;text-transform:uppercase;color:var(--muted);background:var(--bg)}
+td.best{font-weight:600;color:var(--ours)}
+td.worse{color:var(--prior)}
+
+/* charts */
+.chart{background:var(--surface);border:1px solid var(--rule);border-radius:4px;padding:18px 18px 14px;font-family:var(--sans);font-size:13.5px}
+.legend{display:flex;gap:16px;flex-wrap:wrap;color:var(--muted);font-size:12.5px;margin-bottom:12px}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:6px;vertical-align:-1px}
+.brow{display:grid;grid-template-columns:minmax(120px,230px) 1fr;gap:12px;align-items:center;padding:5px 0}
+.brow .lab{line-height:1.25}
+.brow .lab small{display:block;color:var(--muted);font-size:12px}
+.bars{display:flex;flex-direction:column;gap:3px}
+.b{height:11px;border-radius:2px;position:relative;min-width:2px}
+.b em{position:absolute;left:100%;top:50%;transform:translateY(-50%);margin-left:6px;font-style:normal;font-family:var(--mono);font-size:11.5px;color:var(--ink);white-space:nowrap}
+.track{padding-right:54px}
+.c-ours{background:var(--ours)} .c-ours2{background:color-mix(in srgb,var(--ours) 45%,transparent)}
+.c-prior{background:var(--prior)} .c-prior2{background:color-mix(in srgb,var(--prior) 45%,transparent)}
+.c-sensor{background:var(--sensor)} .c-sensor2{background:color-mix(in srgb,var(--sensor) 45%,transparent)}
+.c-frozen{background:var(--frozen)} .c-tuned{background:var(--tuned)}
+
+.div .brow{grid-template-columns:minmax(110px,190px) 1fr}
+.dtrack{position:relative;height:22px}
+.dtrack .zero{position:absolute;top:-5px;bottom:-5px;width:1px;background:var(--ink);opacity:.55}
+.dtrack .bar2{position:absolute;top:5px;height:12px;border-radius:2px}
+.dtrack .ci{position:absolute;top:10px;height:2px;background:var(--ink);opacity:.75}
+.dtrack .v{position:absolute;top:2px;font-family:var(--mono);font-size:11.5px;white-space:nowrap}
+.axis{display:grid;grid-template-columns:minmax(110px,190px) 1fr;gap:12px;color:var(--muted);font-size:11.5px;font-family:var(--mono);margin-top:4px}
+.ticks{display:flex;justify-content:space-between}
+
+.stack{display:flex;height:26px;border-radius:3px;overflow:hidden}
+.stack span{display:block;height:100%}
+.stackrow{display:grid;grid-template-columns:90px 1fr 70px;gap:12px;align-items:center;padding:6px 0}
+.stackrow b{font-weight:600}
+.stackrow .tot{font-family:var(--mono);text-align:right}
+
+/* diagram */
+svg text{font-family:var(--sans);fill:var(--ink)}
+svg .t{font-size:12.5px} svg .ts{font-size:11px;fill:var(--muted)} svg .th{font-size:13px;font-weight:600}
+svg .mono{font-family:var(--mono);font-size:11px;fill:var(--muted)}
+.bx{stroke-width:1.2;rx:4}
+.f-frozen{fill:var(--frozen-soft);stroke:var(--frozen)} .f-tuned{fill:var(--tuned-soft);stroke:var(--tuned)}
+.f-ours{fill:var(--ours-soft);stroke:var(--ours)} .f-sensor{fill:var(--sensor-soft);stroke:var(--sensor)}
+.f-plain{fill:var(--surface);stroke:var(--frozen)} .f-fit{fill:var(--surface);stroke:var(--ink);stroke-dasharray:4 3}
+.ln{fill:none;stroke:var(--ink);stroke-width:1.2;opacity:.8} .ln-ours{fill:none;stroke:var(--ours);stroke-width:1.5}
+.ln-sensor{fill:none;stroke:var(--sensor);stroke-width:1.5}
+.gate{fill:var(--surface);stroke:var(--ours);stroke-width:1.5}
+
+footer{border-top:1px solid var(--rule);margin-top:40px;padding-block:26px 50px;font-family:var(--sans);font-size:13.5px;color:var(--muted)}
+.refs{font-family:var(--sans);font-size:13.5px;line-height:1.5;padding-left:1.4em}
+.refs li{margin:.45em 0}
+pre{font-family:var(--mono);font-size:12.5px;background:var(--surface);border:1px solid var(--rule);border-radius:4px;padding:12px 14px;overflow-x:auto}
+</style>
+</head>
+<body>
+
+<div class="bar"><nav aria-label="Sections">
+  <a class="name" href="#top">PromptMoGe</a>
+  <a href="#approach">Approach</a><a href="#training">Training</a><a href="#device">On device</a>
+  <a href="#results">Results</a><a href="#limits">Limitations</a><a href="#refs">References</a>
+</nav></div>
+
+<header class="hero wide" id="top">
+  <div class="kicker">Technical report · 2026</div>
+  <h1>PromptMoGe: metric geometry from one photo and a phone LiDAR, computed on the device</h1>
+  <p class="lede">We prompt the MoGe‑3 geometry foundation model with the coarse LiDAR depth that every iPhone Pro and iPad Pro already produces, and compress the result until the whole pipeline — a ViT‑L, a sparse 3‑D refiner and a robust metric fit — runs on an iPad in about 150&nbsp;ms.</p>
+  <!-- Authors and affiliations go here. -->
+  <div class="links">
+    <a href="https://github.com/sergmister/PromptMoGe">Code</a>
+    <a href="https://huggingface.co/sergmister/PromptMoGe">Weights &amp; iOS models</a>
+    <a href="https://github.com/sergmister/PromptMoGe/tree/main/ios/PromptMoGeDemo">iOS demo</a>
+    <a class="soon" href="#visuals">Real-world captures — coming soon</a>
+  </div>
+  <div class="facts">
+    <div class="fact"><b>152 ms</b><span>Model A, 480×640 metric point map, end to end on an iPad Pro M5 (Model B: 129 ms)</span></div>
+    <div class="fact"><b>−25 %</b><span>thin-structure error against PromptDA‑L on 61 held-out rooms, at a third of its tokens</span></div>
+    <div class="fact"><b>61 / 61</b><span>rooms where it beats the calibrated LiDAR; −15 % error overall, −46 % against the raw sensor</span></div>
+    <div class="fact"><b>+0.4 %</b><span>accuracy cost of the on-device Model A relative to the full-size teacher</span></div>
+  </div>
+</header>
+
+<main>
+<section class="col">
+  <h2>Summary</h2>
+  <p>Phones pair a sharp camera with a LiDAR that is metric but coarse (256×192), biased by a depth-dependent few percent, and blind to thin structures. Monocular geometry models have the opposite profile: MoGe‑3 recovers crisp relative shape, but its metric scale is a guess — on our ARKitScenes protocol its own scale head is off by 14.8&nbsp;%, against 1.9&nbsp;% for the raw sensor.</p>
+  <p>PromptMoGe joins the two. A four-channel LiDAR prompt enters a <em>frozen</em> DINOv2 backbone and MoGe‑3's decoder through zero-initialised gates, the network's scale-free depth is attached to the sensor by a closed-form robust fit that we differentiate through during training, and MoGe‑3's sparse 3‑D refiner is fed the confidence-gated disagreement with the sensor. Almost every component exists because a simpler version failed in a measured way, and we report those failures.</p>
+  <p>Two compressed models carry this to an iPad. <b>Model A</b> (480×640) is indistinguishable from the teacher on every benchmark we have; <b>Model B</b> (240×320) trades about 3&nbsp;% accuracy for 23 ms. Both run with the Neural Engine, the GPU and custom int8 Metal kernels each doing the part they are fastest at, and agree with the PyTorch reference to 0.2&nbsp;%.</p>
+  <p>Against PromptDA‑L, the strongest published LiDAR-prompted model, the honest summary is: better as released, a statistical tie in pooled error once both get the same sensor calibration, far better on thin and near structures, worse where the sensor is confidently wrong — with 1&nbsp;200 tokens instead of 3&nbsp;888, and on the device.</p>
+</section>
+
+<section class="wide" id="visuals">
+  <div class="slots">
+    <div class="slot"><b>Figure slot · teaser</b>RGB, raw LiDAR, PromptDA‑L and PromptMoGe depth for one hand-held capture, with zoomed insets on thin structures.</div>
+    <div class="slot"><b>Figure slot · point clouds</b>Orbiting point clouds from the demo app: raw LiDAR, Model A and Model B on the same frame.</div>
+    <div class="slot"><b>Figure slot · reconstruction</b>A fused room scan from PromptMoGe depth beside the same scan fused from raw LiDAR.</div>
+  </div>
+  <p class="note col" style="margin-top:12px">Real-world captures recorded with the demo app will be added here.</p>
+</section>
+
+<section class="col" id="approach">
+  <h2>Approach</h2>
+  <h3>Starting point: MoGe‑3</h3>
+  <p>MoGe‑3 <a href="#r-moge3">[1]</a> predicts an affine-invariant point map <span class="num">(x/z, y/z, log z)</span>: a DINOv2 ViT‑L/14 encoder, a normalisation-free convolutional neck that decodes 30×40 tokens up to 480×640 over five levels, and point, normal and mask heads. Its distinguishing part is <em>self-guided sparse 3‑D refinement</em>: every pixel is lifted to a voxel at <span class="num">(i, j, round(256·log z))</span> and a sparse 3‑D U‑Net, conditioned on the encoder feature, predicts an update to log‑depth, so features mix by 3‑D proximity instead of image proximity and depth edges stay sharp.</p>
+  <p>Aligned to the LiDAR by a robust scale and shift, stock MoGe‑3 reaches 3.5&nbsp;% error on confident pixels — worse than the raw sensor (1.9&nbsp;%). Relative shape alone is not enough; the sensor has to go <em>into</em> the network.</p>
+</section>
+
+<figure class="wide">
+  <div class="scroll"><svg viewBox="0 0 1180 660" style="width:100%;min-width:940px;height:auto;display:block" role="img" aria-label="Architecture of PromptMoGe: MoGe-3 modules in grey and blue, added LiDAR prompt path in green">
+    <defs>
+      <marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="context-stroke"/></marker>
+    </defs>
+
+    <!-- lane labels -->
+    <text class="mono" x="14" y="26">IMAGE PATH · MoGe‑3</text>
+    <text class="mono" x="14" y="288">LIDAR PROMPT PATH · added</text>
+    <text class="mono" x="14" y="476">SPARSE 3‑D REFINEMENT AND METRIC ATTACHMENT</text>
+
+    <!-- lane 1 -->
+    <rect class="bx f-plain" x="14" y="60" width="96" height="76"/>
+    <text class="th" x="62" y="92" text-anchor="middle">RGB</text>
+    <text class="ts" x="62" y="110" text-anchor="middle">→ 420×560</text>
+    <path class="ln" d="M110 98 H150" marker-end="url(#ah)"/>
+
+    <rect class="bx f-frozen" x="150" y="46" width="440" height="104"/>
+    <text class="th" x="166" y="68">DINOv2 ViT‑L/14 · 24 blocks · frozen</text>
+    <text class="ts" x="166" y="84">1 200 patch tokens (30×40) + class token</text>
+    <g id="blocks"></g>
+    <text class="ts" x="574" y="141" text-anchor="end">taps 5 · 11 · 17 · 23 ▸</text>
+
+    <path class="ln" d="M590 98 H626" marker-end="url(#ah)"/>
+    <rect class="bx f-frozen" x="626" y="66" width="92" height="64"/>
+    <text class="t" x="672" y="92" text-anchor="middle">Σ projections</text>
+    <text class="ts" x="672" y="110" text-anchor="middle">E · 1024×30×40</text>
+    <path class="ln" d="M718 98 H752" marker-end="url(#ah)"/>
+
+    <rect class="bx f-tuned" x="752" y="28" width="210" height="128"/>
+    <text class="th" x="766" y="48">Convolutional neck · fine-tuned</text>
+    <text class="ts" x="766" y="64">30×40 → 480×640, 1024 → 32 ch.</text>
+    <g id="neck"></g>
+
+    <path class="ln" d="M962 98 H994" marker-end="url(#ah)"/>
+    <rect class="bx f-tuned" x="994" y="52" width="172" height="92"/>
+    <text class="th" x="1008" y="74">Heads · fine-tuned</text>
+    <text class="t" x="1008" y="94">points (x/z, y/z, log z)</text>
+    <text class="t" x="1008" y="112">normals · validity mask</text>
+    <text class="ts" x="1008" y="132">Model B: 4 levels → 240×320</text>
+
+    <!-- lane 2 -->
+    <rect class="bx f-sensor" x="14" y="300" width="110" height="92"/>
+    <text class="th" x="69" y="326" text-anchor="middle">LiDAR</text>
+    <text class="ts" x="69" y="344" text-anchor="middle">depth + confidence</text>
+    <text class="ts" x="69" y="360" text-anchor="middle">256×192</text>
+    <text class="ts" x="69" y="378" text-anchor="middle">holes nearest-filled</text>
+    <path class="ln-sensor" d="M124 346 H158" marker-end="url(#ah)"/>
+
+    <rect class="bx f-ours" x="158" y="296" width="178" height="100"/>
+    <text class="th" x="170" y="316">Prompt · 4 channels</text>
+    <text class="ts" x="170" y="334">log depth − median, clamped</text>
+    <text class="ts" x="170" y="350">valid · confidence</text>
+    <text class="ts" x="170" y="366">uncertainty (conf × 3–5 m range)</text>
+    <text class="ts" x="170" y="384">missing pixel = (0, 0, 0, 1)</text>
+
+    <path class="ln-ours" d="M336 326 H372" marker-end="url(#ah)"/>
+    <rect class="bx f-ours" x="372" y="296" width="150" height="60"/>
+    <text class="th" x="384" y="318">Prompt stem</text>
+    <text class="ts" x="384" y="336">5 convs, stride 14</text>
+    <text class="ts" x="384" y="350">→ 256×30×40</text>
+
+    <!-- token gates -->
+    <g id="tgates"></g>
+    <text class="ts" x="416" y="246">1×1 projection ⊙ per-channel gate g ∈ ℝ¹⁰²⁴,</text>
+    <text class="ts" x="416" y="261">initialised to 0</text>
+
+    <!-- pyramid -->
+    <path class="ln-ours" d="M336 376 H560 V326 H600" marker-end="url(#ah)"/>
+    <rect class="bx f-ours" x="600" y="296" width="200" height="100"/>
+    <text class="th" x="612" y="316">Prompt pyramid</text>
+    <text class="ts" x="612" y="334">prompt at 480×640, stride-2 convs</text>
+    <text class="ts" x="612" y="350">one feature map per neck level</text>
+    <text class="ts" x="612" y="366">widths mirror the neck (A, B):</text>
+    <text class="ts" x="612" y="382">512 · 256 · 128 · 64 · 32</text>
+    <g id="ngates"></g>
+    <text class="ts" x="980" y="226">gates init 0 ⇒ the untrained model</text>
+    <text class="ts" x="980" y="242">is bit-identical to MoGe‑3</text>
+
+    <!-- lane 3 -->
+    <path class="ln" d="M1080 144 V192 H1172 V540 H1140" marker-end="url(#ah)" opacity=".8"/>
+    <rect class="bx f-plain" x="986" y="504" width="154" height="72"/>
+    <text class="th" x="998" y="528">Voxelise</text>
+    <text class="ts" x="998" y="546">(i, j, round(256·log z))</text>
+    <text class="ts" x="998" y="562">one voxel per pixel</text>
+    <path class="ln" d="M986 540 H950" marker-end="url(#ah)"/>
+
+    <rect class="bx f-tuned" x="690" y="492" width="260" height="96"/>
+    <text class="th" x="702" y="514">Sparse 3‑D U‑Net · K steps</text>
+    <text class="ts" x="702" y="532">log z ← log z + Δ, rays fixed</text>
+    <text class="ts" x="702" y="548">encoder feature E at the bottleneck</text>
+    <text class="ts" x="702" y="564">A, B: narrowed, int8 quantisation-aware</text>
+    <text class="ts" x="702" y="580">K = 1 deployed (0 and 3 available)</text>
+
+    <rect class="bx f-ours" x="690" y="424" width="260" height="44"/>
+    <text class="t" x="702" y="442">+ LiDAR residual channel, zero-init</text>
+    <text class="ts" x="702" y="458">(log d_lidar − log z) · κ(conf), refit per step</text>
+    <path class="ln-ours" d="M820 468 V492" marker-end="url(#ah)"/>
+
+    <path class="ln" d="M690 540 H652" marker-end="url(#ah)"/>
+    <rect class="bx f-fit" x="440" y="498" width="212" height="84"/>
+    <text class="th" x="452" y="520">Robust metric fit · closed form</text>
+    <text class="ts" x="452" y="538">depth = s · z + t on confident LiDAR</text>
+    <text class="ts" x="452" y="554">4 trimming passes keep the best 80 %</text>
+    <text class="ts" x="452" y="570">differentiated through in training</text>
+
+    <path class="ln" d="M440 540 H402" marker-end="url(#ah)"/>
+    <rect class="bx f-plain" x="232" y="504" width="170" height="72"/>
+    <text class="th" x="244" y="528">Metric point map</text>
+    <text class="ts" x="244" y="546">depth (m), points, normals,</text>
+    <text class="ts" x="244" y="562">mask, field of view</text>
+
+    <!-- sensor feeds refiner + fit -->
+    <path class="ln-sensor" d="M69 392 V446 H690" marker-end="url(#ah)"/>
+    <path class="ln-sensor" d="M546 446 V498" marker-end="url(#ah)"/>
+
+    <!-- legend -->
+    <g transform="translate(14,612)">
+      <rect class="bx f-frozen" x="0" y="0" width="16" height="16"/><text class="ts" x="24" y="13">MoGe‑3, frozen</text>
+      <rect class="bx f-tuned" x="140" y="0" width="16" height="16"/><text class="ts" x="164" y="13">MoGe‑3, fine-tuned (A, B: compressed)</text>
+      <rect class="bx f-ours" x="400" y="0" width="16" height="16"/><text class="ts" x="424" y="13">added, zero-initialised</text>
+      <rect class="bx f-sensor" x="580" y="0" width="16" height="16"/><text class="ts" x="604" y="13">sensor</text>
+      <rect class="bx f-fit" x="670" y="0" width="16" height="16"/><text class="ts" x="694" y="13">closed form, no parameters</text>
+      <circle class="gate" cx="880" cy="8" r="8"/><text class="ts" x="875" y="12">⊙</text><text class="ts" x="896" y="13">gate, initialised to zero</text>
+    </g>
+  </svg></div>
+  <figcaption><b>Figure 1.</b> PromptMoGe. Grey and blue modules are MoGe‑3; green is what we add (3.1 M parameters on a 370 M model). One prompt map feeds three additive paths, each initialised so that the untrained model computes exactly the stock function: gated tokens before ViT blocks 0, 4 and 8, a gated pyramid into the five neck levels, and a residual channel in the refiner. Metric scale is attached outside the network by a closed-form fit.</figcaption>
+</figure>
+
+<section class="col">
+  <h3>Zero-initialised gates, not zero-initialised projections</h3>
+  <p>PromptDA <a href="#r-pda">[2]</a> and ControlNet-style designs add the condition through a zero-initialised projection. Into a <em>frozen</em> ViT this failed twice: training diverged within 160 steps, and with a 5× lower rate it drifted instead — projection norms grew 35× in 160 steps while the gradient norm stayed small. The cause is Adam's step size: it moves every weight by roughly the learning rate per step whatever the gradient says, so a zero-initialised 256×1024 projection performs a growing random walk into the residual stream. We instead use a normally initialised projection multiplied by a <b>per-channel gate initialised to zero</b>, which bounds the injection with 1 024 numbers instead of 262 144 and gets its own, higher learning rate. A unit test asserts that the untrained model is bit-identical to MoGe‑3.</p>
+  <p>Where does the prompt matter? Trained from stock MoGe‑3 with everything else equal, removing the neck pyramid costs +17.8&nbsp;% error on all 61 held-out rooms; removing the token injection is a tie (+0.5&nbsp;%) except on thin structures (+2.2&nbsp;%) (<a href="#ablations">ablations</a>).</p>
+
+  <h3>Metric attachment that training cannot game</h3>
+  <p>The network's depth lives in an arbitrary affine frame. We attach it with a trimmed least-squares scale and shift to the confident LiDAR pixels — four passes that keep the 80&nbsp;% smallest relative residuals. Computing this fit with detached values and then applying a metric loss failed badly: the network shifts its global scale, the fit re-adapts, and training chases its own gauge (log‑depth inflated by 4.6 nats while the fitted scale collapsed from 0.83 to 0.01). Choosing the trimming weights from detached values but <b>differentiating through the final solve</b> makes the loss exactly invariant to the network's gauge and removed the problem.</p>
+  <p>Two optional inference-time refinements help with ARKit-grade sensors: a 12-knot lookup table that removes the LiDAR's depth-dependent bias against laser-scan ground truth (the sensor reads 3.0&nbsp;% short at 0.35 m and 0.4&nbsp;% short at 4.5 m — the signature of a time-of-flight range offset), and a per-frame quadratic gauge fitted robustly to the sensor. The calibration alone accounts for much of what any model gains over the raw sensor, so every comparison below states whether the baseline received it.</p>
+
+  <h3>A refiner that sees the sensor</h3>
+  <p>At 1 200 tokens the stock refiner barely changes depth. We give it two extra zero-initialised input channels: the log-residual between the re-aligned LiDAR and the current depth, and its gate <span class="num">κ = 0.15 + 0.85·conf</span>. One step then lowers error in holes (−5&nbsp;%), low-confidence regions (−4&nbsp;%) and at edges (−3&nbsp;%), and costs 4&nbsp;% on thin structures — consistently, in 60 of 61 rooms. We therefore ship K&nbsp;=&nbsp;1 and expose K&nbsp;=&nbsp;0.</p>
+</section>
+
+<section class="col" id="training">
+  <h2>Training</h2>
+  <p><b>What is trained.</b> The DINOv2 backbone stays frozen in every model. The prompt stem, pyramid and gates, MoGe‑3's neck and heads, and (in a separate stage) the refiner are trained: 24 M of 374 M parameters. Seven attempts to adapt the backbone — LoRA, full fine-tuning with L2‑SP, feature distillation — gave no gain and more forgetting.</p>
+  <p><b>Data.</b> Real frames come from ARKitScenes <a href="#r-arkit">[3]</a>: RGB, ARKit depth and confidence, and ground truth rendered from Faro laser scans (800 videos for most of the lineage, 1 570 videos / 157 k frames for the final stage). One batch slot in four is a Hypersim <a href="#r-hypersim">[4]</a> frame with exact depth and normals and a <em>learned</em> sensor: a small network trained on 14 k real LiDAR/laser pairs that reproduces the real sensor's edge bias, correlated noise, hole sizes and confidence statistics. A frozen copy of stock MoGe‑3 supervises everything the sensor cannot.</p>
+  <p><b>Against copying the sensor.</b> The easiest solution for a prompted model is to pass the prompt through. We counter it with prompt dropout (25&nbsp;% of samples see an empty prompt and are distilled to stock MoGe‑3), simulated holes and low-confidence blobs, uncertainty-scaled depth noise, a 4× loss weight off-sensor, and a geometric-normal loss — without which the model reproduced sensor fuzz (depth normals 20.3° against 17.7° for stock MoGe‑3). Laser-scan edges sit a median 4.9 px from image edges, so ground truth within 3 px of its own depth jumps is masked, and an edge-gradient loss against the RGB-only teacher restores sharpness there; it is the source of most of the thin-structure gain.</p>
+  <p><b>Losses.</b> Truncated log‑L1 after the differentiable fit; a low-pass fidelity term that keeps the output within 0.3&nbsp;% of the confident sensor at coarse scale; scale-and-shift-invariant, multi-scale gradient, local-crop and boundary terms; teacher ties on rays, normals and mask. AdamW, cosine schedule, MoGe‑3's per-module bf16, batch 4 on one 24–48 GB GPU.</p>
+</section>
+
+<figure class="wide">
+  <div class="tw"><table>
+    <thead><tr><th>What went wrong</th><th class="l">Evidence</th><th class="l">What fixed it</th></tr></thead>
+    <tbody>
+    <tr><td class="l">Zero-init projections into a frozen ViT</td><td class="l">diverged by step 160; at a lower rate, weight norm 0.005 → 0.17 in 160 steps</td><td class="l">per-channel zero gates with their own learning rate</td></tr>
+    <tr><td class="l">Detached scale-and-shift fit</td><td class="l">loss 0.030 → 0.073, fitted scale 0.83 → 0.01: a “gauge treadmill”</td><td class="l">differentiate through the final least-squares solve</td></tr>
+    <tr><td class="l">An apparent accuracy ceiling</td><td class="l">a global affine fit of the raw sensor stalls at 1.49 %; a depth lookup table reaches 1.33 %</td><td class="l">calibrate the sensor input once, before prompt, losses and fits</td></tr>
+    <tr><td class="l">Copying the sensor</td><td class="l">normals 20.3° vs 17.7° stock; follows the sensor where it is wrong</td><td class="l">prompt dropout, simulated failures, geometric-normal loss</td></tr>
+    <tr><td class="l">Blurred depth edges</td><td class="l">laser ground truth is misregistered by ~5 px at edges</td><td class="l">mask the edge band; supervise edges from the RGB-only teacher</td></tr>
+    <tr><td class="l">Frozen int8 refiner still drifted</td><td class="l">activation clips are buffers updated in <code>forward</code>: one grew 72.9 → 519.2</td><td class="l">freeze quantisation observers whenever the refiner is not trained</td></tr>
+    <tr><td class="l">Prompts with scattered holes</td><td class="l">error ×2–4 with 50–80 % of LiDAR pixels dropped</td><td class="l">nearest-fill the prompt: error back within 3 % down to 5 % of pixels</td></tr>
+    </tbody></table></div>
+  <figcaption><b>Table 1.</b> Most of the design is a response to a measured failure.</figcaption>
+</figure>
+
+<section class="col" id="device">
+  <h2>Running it on an iPad</h2>
+  <p>Profiled module by module, the full model costs 296 ms per frame on an iPad Pro M5 — and its refiner's voxel structure alone took 82 ms to build. Two things close the gap to 152 ms: a smaller model that computes the same function, and a runtime that puts every piece on the processor that is fastest at it.</p>
+  <h3>Compression without an accuracy bill (Model A)</h3>
+  <ul>
+    <li><b>Re-scheduled prompt pyramid.</b> One 256→256 convolution at 480×640 was 84&nbsp;% of the prompt path's 431 GFLOPs, feeding the neck level where the injection matters least (0.25&nbsp;% of the activation it joins). Mirroring the neck's widths and regressing the new pyramid onto the old one's five outputs (two minutes of training) cuts the path to 29 GFLOPs with every metric within ±0.5&nbsp;%.</li>
+    <li><b>Exact activation rescaling.</b> The Neural Engine's fp16 accumulator overflows on the norm-free ReLU decoder. Because ReLU is positively homogeneous, dividing each block's inputs and biases by α and multiplying its output back is exact: peak activation 433 → 8, with a per-layer certificate that the accumulator bound is respected.</li>
+    <li><b>Refiner.</b> The coarsest level cost 27&nbsp;% of convolution time for 0.8&nbsp;% of voxels and is halved in width; all 31 wide layers are trained quantisation-aware to the Metal kernel's exact int8 contract (per-channel weights, per-tensor activations, int32 accumulation), distilled from the uncompressed refiner's per-voxel updates — ground truth cannot protect edges that it masks. 39.4 M → 17.2 M parameters.</li>
+  </ul>
+  <p><b>Model B</b> drops one ×2 level from the neck, heads, pyramid and refiner — same 1 200 tokens, 240×320 output — warm-started by transferring the shared levels and refitting the head outputs by least squares.</p>
+  <h3>Three processors, one frame</h3>
+  <p>Self-attention at 1 200 tokens is where the Neural Engine loses: it retires softmax elements at a fixed rate, so the ViT takes 264 ms there. The GPU's fused attention never materialises the score matrix. We export every transformer block as two Core ML models — attention for the GPU, the MLP half for the engine — hand activations over through IOSurface-backed buffers without copies, and run the prompt pyramid on the engine while the GPU is busy with attention. The refiner has no Core ML form at all: voxelisation, pooling maps, 27-neighbour maps and per-tile tap masks are built on the GPU from a column-sorted layout in about 2 ms, instead of 60–80 ms on the CPU, and every residual block is three Metal dispatches around tiled int8 matrix multiplies.</p>
+</section>
+
+<figure class="wide">
+  <div class="chart">
+    <div class="legend">
+      <span><i class="c-sensor"></i>prompt (CPU + GPU/ANE)</span><span><i class="c-frozen"></i>ViT: attention on GPU, MLPs on ANE</span>
+      <span><i class="c-tuned"></i>neck + heads (ANE)</span><span><i class="c-ours"></i>sparse refiner, K = 1 (Metal)</span><span><i class="c-prior"></i>metric fit + host copies</span>
+    </div>
+    <div id="lat"></div>
+    <div class="axis" style="grid-template-columns:90px 1fr 70px"><div></div><div class="ticks"><span>0</span><span>40</span><span>80</span><span>120</span><span>160 ms</span></div><div></div></div>
+  </div>
+  <figcaption><b>Figure 2.</b> Measured end-to-end latency on an iPad Pro M5 (warm, best of 10; medians are 1 ms higher), from camera frame to metric depth. Each extra refinement step costs about 23 ms (A) or 11 ms (B). On-device depth differs from the PyTorch reference by 0.15&nbsp;% (A) and 0.17&nbsp;% (B) with identical masks. Both models share the ViT, so Model B's saving is all downstream of it.</figcaption>
+</figure>
+
+<section class="col" id="results">
+  <h2>Results</h2>
+  <p>Unless noted, models run at 1 200 tokens with one refinement step, and errors are absolute relative error (AbsRel) against laser-scan ground truth with no alignment to it. <b>PromptMoGe‑L</b> is the full-size teacher; <b>Model A</b> and <b>Model B</b> are the on-device models. PromptDA‑L is our run of the public checkpoint at its native 756×1008 (3 888 tokens). “+ our attachment” gives PromptDA's output the same sensor calibration, robust fit and gauge our models use — the like-for-like comparison.</p>
+
+  <h3>61 held-out rooms</h3>
+  <p>Our main benchmark is 61 rooms (3 340 frames) of the ARKitScenes validation pool, split by physical room with the split fixed before any data was downloaded; none of the models below trained on them. Confidence intervals resample rooms.</p>
+</section>
+
+<figure class="wide">
+  <div class="chart">
+    <div class="legend"><span><i class="c-frozen"></i>all pixels</span><span><i class="c-frozen" style="opacity:.5"></i>sensor-confident pixels</span></div>
+    <div id="vdev"></div>
+  </div>
+  <figcaption><b>Figure 3.</b> AbsRel on 61 held-out rooms (lower is better). The network is worth 15&nbsp;% over the calibrated sensor — 27&nbsp;% in low-confidence regions and 29&nbsp;% in holes — and is better in every one of the 61 rooms (paired figures measured on the preceding checkpoint; the released teacher is a further 0.6–0.8&nbsp;% better). Model A costs +0.4&nbsp;%; Model B +3&nbsp;%, mostly on thin structures. Sensor rows and Model B are scored at stride 2, the rest at stride 4; Model B on its own 240×320 grid.</figcaption>
+</figure>
+
+<figure class="wide">
+  <div class="chart div">
+    <div class="legend"><span><i class="c-ours"></i>PromptMoGe‑L better</span><span><i class="c-prior"></i>PromptDA‑L better</span><span>— 95 % interval over rooms</span></div>
+    <div id="paired"></div>
+    <div class="axis"><div></div><div class="ticks"><span>−30 %</span><span>−20</span><span>−10</span><span>0</span><span>+10</span><span>+20</span><span>+30 %</span></div></div>
+  </div>
+  <figcaption><b>Figure 4.</b> Paired error difference, PromptMoGe‑L against PromptDA‑L <em>with our attachment</em>, by pixel stratum. Pooled error is a tie (−0.3&nbsp;% [−1.2, +0.7]); against PromptDA as released it is −2.8&nbsp;% [−5.4, −0.2]. The two models have opposite strengths: ours is far better on thin and near structures and at close range; PromptDA is better where the sensor is confidently wrong (glass, mirrors) and beyond 2 m. Model A gives the same picture (thin −24.6&nbsp;%, pooled +0.1&nbsp;%).</figcaption>
+</figure>
+
+<section class="col">
+  <h3>Official ARKitScenes upsampling benchmark</h3>
+  <p>On the 60&nbsp;% of the official validation split that lies in our development partition (3 373 frames, Apple's protocol, ×4), our models match or beat our PromptDA‑L run on identical frames. We do <em>not</em> claim the published state of the art: our PromptDA run scores 0.0143 m where its paper reports 0.0132 m on the full split, a gap we could not explain by resolution or image format, while the sensor baseline reproduces to 1&nbsp;%.</p>
+</section>
+<figure class="wide">
+  <div class="tw"><table>
+    <thead><tr><th>×4 · 768×1024</th><th>L1 (m)</th><th>RMSE (m)</th><th>AbsRel</th><th class="l">paired vs PromptDA‑L as released</th></tr></thead>
+    <tbody>
+    <tr><td>raw ARKit depth</td><td>0.0247</td><td>0.0432</td><td>0.0213</td><td class="l"></td></tr>
+    <tr><td>raw + depth calibration, no network</td><td>0.0166</td><td>0.0390</td><td>0.0142</td><td class="l"></td></tr>
+    <tr><td>PromptDA‑L, our run</td><td>0.0143</td><td>0.0334</td><td>0.0125</td><td class="l">—</td></tr>
+    <tr><td>PromptDA‑L + our attachment</td><td>0.0140</td><td>0.0332</td><td>0.0121</td><td class="l"></td></tr>
+    <tr class="ours"><td>PromptMoGe‑L</td><td>0.0140</td><td>0.0334</td><td>0.0120</td><td class="l">AbsRel −3.9 % [−6.1, −1.6] · L1 −2.2 % [−4.3, +0.1]</td></tr>
+    <tr class="ours"><td>Model A (on-device)</td><td>0.0141</td><td>0.0334</td><td>0.0121</td><td class="l">AbsRel −3.5 % [−5.8, −1.2]</td></tr>
+    <tr class="ours"><td>Model B (on-device)</td><td>0.0147</td><td>0.0340</td><td>0.0125</td><td class="l"></td></tr>
+    <tr class="grp"><td colspan="5">published, full split (not the same frames)</td></tr>
+    <tr><td>PromptDA‑L [2]</td><td>0.0132</td><td>0.0315</td><td>–</td><td class="l"></td></tr>
+    <tr><td>MSPF</td><td>0.0149</td><td>0.0362</td><td>–</td><td class="l"></td></tr>
+    </tbody></table></div>
+  <figcaption><b>Table 2.</b> Official ARKitScenes depth-upsampling protocol, development partition.</figcaption>
+</figure>
+
+<section class="col">
+  <h3>Zero-shot on seven other datasets</h3>
+  <p>None of these datasets was used to train our models or PromptDA. The prompt is derived from ground truth: downsampled ×16, or ×8 with about 40&nbsp;% of it removed in random rectangles (the more informative setting — with an exact dense ×8 prompt, plain interpolation beats every network). All models receive the same nearest-filled prompt and no intrinsics.</p>
+</section>
+<figure class="wide">
+  <div class="tw"><table>
+    <thead><tr><th rowspan="2">dataset</th><th colspan="3">prompt ×16</th><th colspan="4">prompt ×8, 40 % masked</th></tr>
+      <tr><th>PromptDA‑L</th><th>Model A</th><th>PromptMoGe‑L</th><th>PromptDA‑L</th><th>RGB-only + fit</th><th>Model A</th><th>PromptMoGe‑L</th></tr></thead>
+    <tbody>
+    <tr><td>NYUv2</td><td>0.0256</td><td class="best">0.0135</td><td>0.0136</td><td>0.0345</td><td>0.0348</td><td>0.0236</td><td class="best">0.0235</td></tr>
+    <tr><td>iBims‑1</td><td>0.0189</td><td>0.0145</td><td class="best">0.0140</td><td>0.0287</td><td>0.0282</td><td>0.0241</td><td class="best">0.0240</td></tr>
+    <tr><td>DIODE indoor</td><td>0.0078</td><td>0.0086</td><td class="best">0.0071</td><td>0.0170</td><td>0.0427</td><td>0.0140</td><td class="best">0.0129</td></tr>
+    <tr><td>ETH3D</td><td>0.0221</td><td>0.0205</td><td class="best">0.0170</td><td>0.0398</td><td>0.0388</td><td>0.0331</td><td class="best">0.0317</td></tr>
+    <tr><td>HAMMER <span class="note">(transparent, reflective)</span></td><td>0.0081</td><td>0.0058</td><td class="best">0.0056</td><td>0.0199</td><td>0.0312</td><td>0.0145</td><td class="best">0.0141</td></tr>
+    <tr><td>KITTI <span class="note">(driving)</span></td><td>0.0385</td><td>0.0364</td><td class="best">0.0289</td><td>0.0986</td><td class="best">0.0550</td><td>0.0778</td><td>0.0777</td></tr>
+    <tr><td>DIODE outdoor</td><td class="best">0.0212</td><td>0.0417</td><td>0.0335</td><td class="best">0.0377</td><td>0.0985</td><td>0.0498</td><td>0.0450</td></tr>
+    </tbody></table></div>
+  <figcaption><b>Table 3.</b> Zero-shot AbsRel. PromptMoGe‑L is ahead of PromptDA‑L on six of seven datasets under both prompts (by 16–32&nbsp;% with the masked prompt) and behind on outdoor DIODE, far from its indoor training range. When a very sparse prompt leaves large gaps (KITTI, masked), ignoring the prompt and fitting RGB-only geometry to it wins — an argument for a learned trust mechanism.</figcaption>
+</figure>
+
+<section class="col">
+  <h3>3‑D reconstruction</h3>
+  <p>Depth maps are fused into a TSDF along the recorded ARKit trajectory and compared with the fusion of laser-scan depth, on 163 captures of the 61 rooms. Paired over rooms, PromptMoGe‑L beats PromptDA‑L as released on F@2cm (+0.009 [+0.004, +0.015]) and the calibrated sensor on every metric in 59–61 of 61 rooms; against PromptDA with our attachment it leads narrowly at the standard 4 cm voxel setting and ties at 2 cm; surface normals are 0.4–0.65° better than either PromptDA variant everywhere. <b>Model A equals the teacher to within 0.0003 F‑score</b> — compression is free for reconstruction. On three long captures, refining camera poses from each model's own depth (no ground truth) improves on ARKit's trajectory (ATE 1.55 → 1.34 cm) and gives F@2cm 0.856 for both our models against 0.846 for PromptDA with our attachment, whose surfaces are placed slightly more accurately (2.69 vs 2.83 cm).</p>
+</section>
+<figure class="wide">
+  <div class="tw"><table>
+    <thead><tr><th>163 captures · 4 cm voxels</th><th>F@2cm ↑</th><th>F@5cm ↑</th><th>accuracy cm ↓</th><th>completeness cm ↓</th><th>normals ° ↓</th></tr></thead>
+    <tbody>
+    <tr><td>raw LiDAR + calibration</td><td>0.764</td><td>0.893</td><td>3.75</td><td>1.16</td><td>16.2</td></tr>
+    <tr><td>PromptDA‑L as released</td><td>0.779</td><td>0.895</td><td>3.67</td><td>1.07</td><td>14.1</td></tr>
+    <tr><td>PromptDA‑L + our attachment</td><td>0.785</td><td>0.896</td><td>3.64</td><td class="best">1.05</td><td>14.1</td></tr>
+    <tr class="ours"><td>PromptMoGe‑L</td><td class="best">0.788</td><td class="best">0.898</td><td>3.63</td><td>1.06</td><td class="best">13.5</td></tr>
+    <tr class="ours"><td>Model A (on-device)</td><td class="best">0.788</td><td class="best">0.898</td><td class="best">3.62</td><td>1.06</td><td class="best">13.5</td></tr>
+    </tbody></table></div>
+  <figcaption><b>Table 4.</b> TSDF fusion over 61 held-out rooms, means over rooms; normals at the 2 cm setting. The reference surface is fused laser-scan depth on the same poses, not an independent laser mesh.</figcaption>
+</figure>
+
+<section class="col">
+  <h3>Robustness to a degraded prompt</h3>
+  <p>Perturbing the ARKit prompt identically for every model: our models are essentially immune to depth noise, because the robust fit averages it out and the network does not copy noisy values; misalignment (a timestamp or extrinsic error) is a tie with PromptDA + attachment; scattered dropout is handled by nearest-filling, which the released code and the app do by default.</p>
+</section>
+<figure class="wide">
+  <div class="tw"><table>
+    <thead><tr><th>AbsRel, all pixels · 275 frames</th><th>clean</th><th>noise σ 5 %</th><th>noise σ 10 %</th><th>shift 4 px</th><th>range cut at 2 m</th><th>20 % of pixels kept</th><th>5 % kept</th></tr></thead>
+    <tbody>
+    <tr><td>raw LiDAR + calibration</td><td>0.0154</td><td>0.0450</td><td>0.0833</td><td>0.0239</td><td>0.0261</td><td>0.0165</td><td>0.0191</td></tr>
+    <tr><td>PromptDA‑L as released</td><td>0.0157</td><td>0.0279</td><td>0.0461</td><td>0.0209</td><td>0.0277</td><td>0.0159</td><td>0.0163</td></tr>
+    <tr><td>PromptDA‑L + our attachment</td><td>0.0142</td><td>0.0181</td><td>0.0263</td><td>0.0194</td><td>0.0249</td><td>0.0143</td><td>0.0145</td></tr>
+    <tr class="ours"><td>PromptMoGe‑L</td><td class="best">0.0138</td><td class="best">0.0139</td><td class="best">0.0140</td><td class="best">0.0188</td><td class="best">0.0227</td><td class="best">0.0140</td><td>0.0142</td></tr>
+    <tr class="ours"><td>Model A (on-device)</td><td class="best">0.0138</td><td class="best">0.0139</td><td>0.0141</td><td>0.0189</td><td class="worse">0.0290</td><td class="best">0.0140</td><td class="best">0.0141</td></tr>
+    </tbody></table></div>
+  <figcaption><b>Table 5.</b> Prompt perturbations (dropout columns with the nearest-filled prompt for every model). Without the fill, scattered holes are an out-of-distribution pattern that doubles to quadruples our error — a preprocessing requirement, not an information limit.</figcaption>
+</figure>
+
+<section class="col" id="ablations">
+  <h3>Ablations</h3>
+</section>
+<figure class="wide">
+  <div class="tw"><table>
+    <thead><tr><th>61 rooms · relative change in AbsRel</th><th>all</th><th>confident</th><th>holes</th><th>edges</th><th>thin</th><th>sensor wrong</th><th class="l">rooms worse</th></tr></thead>
+    <tbody>
+    <tr class="grp"><td colspan="8">Injection site — trained from stock MoGe‑3, 4 000 steps, vs. tokens + neck</td></tr>
+    <tr><td>tokens only (no neck pyramid)</td><td class="worse">+17.8 %</td><td class="worse">+18.7 %</td><td>+11.2 %</td><td>+1.7 %</td><td>+1.2 %</td><td class="best">−5.1 %</td><td class="l">61 / 61</td></tr>
+    <tr><td>neck pyramid only (no tokens)</td><td>+0.5 %</td><td>+0.4 %</td><td>+1.2 %</td><td>−0.3 %</td><td class="worse">+2.2 %</td><td>−0.5 %</td><td class="l">22 / 61</td></tr>
+    <tr class="grp"><td colspan="8">Refinement — K = 1 vs K = 0</td></tr>
+    <tr><td>one refinement step</td><td class="best">−1.9 %</td><td>−1.0 %</td><td class="best">−5.3 %</td><td class="best">−2.8 %</td><td class="worse">+4.3 %</td><td>–</td><td class="l">thin worse in 60 / 61</td></tr>
+    <tr class="grp"><td colspan="8">Final training stage (dense frames, teacher-edge loss) vs. the previous checkpoint</td></tr>
+    <tr><td>seed 0 (released)</td><td class="best">−0.64 %</td><td>−0.65 %</td><td>−2.8 %</td><td>−0.2 %</td><td class="best">−6.4 %</td><td>−2.5 %</td><td class="l">18 / 61</td></tr>
+    <tr><td>seed 1</td><td class="best">−0.80 %</td><td>−0.84 %</td><td>−2.1 %</td><td>−1.0 %</td><td class="best">−9.2 %</td><td>−2.0 %</td><td class="l">10 / 61</td></tr>
+    <tr class="grp"><td colspan="8">Compression vs. the teacher</td></tr>
+    <tr><td>Model A</td><td>+0.4 %</td><td>+0.4 %</td><td>+0.3 %</td><td>0.0 %</td><td>−0.2 %</td><td>0.0 %</td><td class="l"></td></tr>
+    <tr><td>Model B (own 240×320 grid, vs A)</td><td class="worse">+2.7 %</td><td>+2.4 %</td><td>–</td><td>+4.1 %</td><td class="worse">+7.3 %</td><td>–</td><td class="l"></td></tr>
+    </tbody></table></div>
+  <figcaption><b>Table 6.</b> The neck pyramid carries the benefit; token injection adds thin-structure accuracy and is the only path that helps where the sensor is wrong. The final stage's gains hold across two seeds. Model B at K = 3 is worse than at K = 1 in 60 of 61 rooms, so we do not recommend it.</figcaption>
+</figure>
+
+<section class="col">
+  <h3>Sparse sensors and confidence</h3>
+  <p>Two further results are not part of this release. A model trained only on ARKit's temporally integrated depth copies the smeared boundaries of a simulated single-pulse 112-beam sensor (confident error 1.2&nbsp;% → 3.2&nbsp;%, and its edges become worse than with the prompt ignored); redrawing a quarter of training prompts through a learned beam simulator recovers 13&nbsp;% of that at +4&nbsp;% on ARKit. And two small heads trained <em>post hoc</em> on frozen features predict the sensor's and the model's own per-pixel error without changing a single depth value; they rank errors well (they recover 50–70&nbsp;% of the random-to-oracle sparsification gap) and one scalar per head calibrates the model-error head (its 90&nbsp;% intervals then cover 91–92&nbsp;%).</p>
+</section>
+
+<section class="col" id="limits">
+  <h2>Limitations</h2>
+  <ul>
+    <li><b>Not better than PromptDA‑L everywhere.</b> Under identical sensor attachment pooled accuracy is a tie. PromptDA is 17&nbsp;% better where the sensor is confidently wrong and 4–9&nbsp;% better at 2–4 m; our low-pass fidelity loss pulls the output toward every confident sensor pixel, including the wrong ones.</li>
+    <li><b>Indoor, short range.</b> Training covers ARKit and Hypersim scenes within about 5 m. Outdoors (DIODE outdoor) PromptDA‑L is roughly twice as accurate.</li>
+    <li><b>RGB-only geometry erodes.</b> With the prompt path bypassed, affine-invariant error on MoGe's own evaluation suite is 2–22&nbsp;% worse than stock MoGe‑3 (worst on KITTI), because the decoder is fine-tuned. Metric scale and field of view are unaffected, and on the device a prompt is always present.</li>
+    <li><b>Ground-truth floor.</b> On sensor-confident pixels the laser ground truth disagrees with its own multi-view fusion by 0.66&nbsp;%, so differences below about 1&nbsp;% there carry little weight. We could not reproduce PromptDA's published ARKitScenes number and label all PromptDA figures as our runs.</li>
+    <li><b>Refinement trades thin structures</b> (+4&nbsp;%) for everything else; the sparse-sensor results rest on a simulator, not hardware.</li>
+  </ul>
+
+  <h2>Related work</h2>
+  <p><b>Prompted depth foundation models.</b> PromptDA <a href="#r-pda">[2]</a> fine-tunes Depth Anything V2, adding a min–max-normalised LiDAR map at four decoder scales through zero-initialised convolutions; it has no confidence input and trains on ARKitScenes and ScanNet++. Prior Depth Anything <a href="#r-priorda">[5]</a> pre-fills arbitrary priors before a conditioned refiner; LDCM <a href="#r-ldcm">[6]</a> combines a Poisson pre-fill with a point-map head; SLIM <a href="#r-slim">[7]</a> fuses sparse LiDAR into the neck of MoGe‑2 for driving. None reports latency on a phone or tablet; all time on datacenter GPUs. <b>Depth completion</b> networks (propagation, transformer and integration-based, e.g. OMNI‑DC <a href="#r-omni">[8]</a>) are strong in domain but brittle to pattern shift; we instead condition a frozen foundation backbone. <b>Conditioning.</b> Our gates follow the zero-initialised lineage of ControlNet <a href="#r-cn">[9]</a> and Flamingo's tanh gates <a href="#r-flamingo">[10]</a>, and like Flamingo keep the large pretrained model frozen. <b>Alignment.</b> The attachment combines MiDaS's closed-form alignment with its residual trimming <a href="#r-midas">[11]</a>, fitted to sensor points rather than ground truth and differentiated through.</p>
+
+  <h2 id="refs">References</h2>
+  <ol class="refs">
+    <li id="r-moge3">L. Kong, R. Li, R. Wang, S. Xu, C. Yao, J. Xiang, J. Yang. <a href="https://arxiv.org/abs/2607.17967">MoGe‑3: Fine-Detail Monocular Geometry Estimation with Self-Guided Sparse Volumetric Refinement</a>. 2026.</li>
+    <li id="r-pda">H. Lin, S. Peng, J. Chen, S. Peng, J. Sun, M. Liu, H. Bao, J. Feng, X. Zhou, B. Kang. <a href="https://arxiv.org/abs/2412.14015">Prompting Depth Anything for 4K Resolution Accurate Metric Depth Estimation</a>. CVPR 2025.</li>
+    <li id="r-arkit">G. Baruch et al. <a href="https://arxiv.org/abs/2111.08897">ARKitScenes</a>. NeurIPS Datasets and Benchmarks 2021.</li>
+    <li id="r-hypersim">M. Roberts et al. <a href="https://arxiv.org/abs/2011.02523">Hypersim</a>. ICCV 2021.</li>
+    <li id="r-priorda">Z. Wang et al. <a href="https://arxiv.org/abs/2505.10565">Depth Anything with Any Prior</a>. ICLR 2026.</li>
+    <li id="r-ldcm">Z. Yu et al. <a href="https://arxiv.org/abs/2605.30115">Large Depth Completion Model from Sparse Observations</a>. ICLR 2026.</li>
+    <li id="r-slim">K. Zheng et al. <a href="https://arxiv.org/abs/2605.26456">Sparse-LiDAR Prompting of Monocular Geometry Foundations</a>. 2026.</li>
+    <li id="r-omni">Y. Zuo, W. Yang, Z. Ma, J. Deng. <a href="https://arxiv.org/abs/2411.19278">OMNI‑DC</a>. ICCV 2025.</li>
+    <li id="r-cn">L. Zhang, A. Rao, M. Agrawala. <a href="https://arxiv.org/abs/2302.05543">Adding Conditional Control to Text-to-Image Diffusion Models</a>. ICCV 2023.</li>
+    <li id="r-flamingo">J.-B. Alayrac et al. <a href="https://arxiv.org/abs/2204.14198">Flamingo</a>. NeurIPS 2022.</li>
+    <li id="r-midas">R. Ranftl et al. <a href="https://arxiv.org/abs/1907.01341">Towards Robust Monocular Depth Estimation</a>. TPAMI 2020.</li>
+    <li>R. Wang et al. <a href="https://arxiv.org/abs/2507.02546">MoGe‑2</a>. NeurIPS 2025. · M. Oquab et al. <a href="https://arxiv.org/abs/2304.07193">DINOv2</a>. TMLR 2024. · L. Yang et al. <a href="https://arxiv.org/abs/2406.09414">Depth Anything V2</a>. NeurIPS 2024.</li>
+  </ol>
+
+  <h2>Citation</h2>
+<pre>@misc{promptmoge2026,
+  title  = {PromptMoGe: LiDAR-Prompted Monocular Geometry on the Device},
+  author = {The PromptMoGe authors},
+  year   = {2026},
+  url    = {https://github.com/sergmister/PromptMoGe}
+}</pre>
+</section>
+</main>
+
+<footer class="wide">Code under the MIT licence. Built on MoGe (Microsoft, MIT) and DINOv2 (Meta AI, Apache 2.0). Evaluated on ARKitScenes, Hypersim, NYUv2, iBims‑1, DIODE, ETH3D, HAMMER and KITTI.</footer>
+
+<script>
+(function(){
+  var NS="http://www.w3.org/2000/svg";
+  function el(tag,attrs,text){var e=document.createElementNS(NS,tag);for(var k in attrs)e.setAttribute(k,attrs[k]);if(text!=null)e.textContent=text;return e;}
+  // ViT blocks
+  var g=document.getElementById("blocks"),x0=166,w=14,gap=3.4,y=94,h=30,inj={0:1,4:1,8:1},tap={5:1,11:1,17:1,23:1};
+  for(var k=0;k<24;k++){
+    var x=x0+k*(w+gap);
+    g.appendChild(el("rect",{x:x,y:y,width:w,height:h,rx:2,"class":"bx "+(inj[k]?"f-ours":"f-frozen")}));
+    if(tap[k])g.appendChild(el("path",{d:"M"+(x+w/2)+" "+y+" v-7","class":"ln"}));
+    if(inj[k]||tap[k])g.appendChild(el("text",{x:x+w/2,y:y+h-10,"text-anchor":"middle","class":"ts"},String(k)));
+  }
+  // token gates: stem -> blocks 0/4/8
+  var tg=document.getElementById("tgates");
+  [0,4,8].forEach(function(b,i){
+    var bx=x0+b*(w+gap)+w/2, gx=bx, gy=250;
+    tg.appendChild(el("path",{d:"M"+(400+i*40)+" 296 V"+(272)+" H"+gx+" V"+(gy+9),"class":"ln-ours"}));
+    tg.appendChild(el("circle",{cx:gx,cy:gy,r:9,"class":"gate"}));
+    tg.appendChild(el("text",{x:gx,y:gy+4,"text-anchor":"middle","class":"ts"},"⊙"));
+    tg.appendChild(el("path",{d:"M"+gx+" "+(gy-9)+" V126","class":"ln-ours","marker-end":"url(#ah)"}));
+  });
+  // neck levels + gates
+  var nk=document.getElementById("neck"),ng=document.getElementById("ngates"),labs=["30×40","60×80","120×160","240×320","480×640"];
+  for(var l=0;l<5;l++){
+    var nx=766+l*38, nh=18+l*9;
+    nk.appendChild(el("rect",{x:nx,y:146-nh,width:30,height:nh,rx:2,"class":"bx f-tuned"}));
+    var gx2=nx+15, gy2=250;
+    ng.appendChild(el("path",{d:"M"+(640+l*30)+" 296 V"+(280-l*3)+" H"+gx2+" V"+(gy2+9),"class":"ln-ours"}));
+    ng.appendChild(el("circle",{cx:gx2,cy:gy2,r:9,"class":"gate"}));
+    ng.appendChild(el("text",{x:gx2,y:gy2+4,"text-anchor":"middle","class":"ts"},"⊙"));
+    ng.appendChild(el("path",{d:"M"+gx2+" "+(gy2-9)+" V148","class":"ln-ours","marker-end":"url(#ah)"}));
+  }
+
+  function div(cls,html){var d=document.createElement("div");d.className=cls;if(html!=null)d.innerHTML=html;return d;}
+  // Figure 3: absolute AbsRel on 61 rooms
+  var V=[["raw ARKit LiDAR","",0.0206,0.0189,"sensor"],["LiDAR + depth calibration","no network",0.0131,0.0111,"sensor"],
+         ["PromptDA‑L as released","3 888 tokens",0.01152,0.01022,"prior"],["PromptDA‑L + our attachment","3 888 tokens",0.01123,0.00993,"prior"],
+         ["PromptMoGe‑L","1 200 tokens",0.01120,0.00988,"ours"],["Model A · on-device","480×640",0.01125,0.00992,"ours"],["Model B · on-device","240×320",0.0118,0.0103,"ours"]];
+  var host=document.getElementById("vdev"),mx=0.0206;
+  V.forEach(function(r){
+    var row=div("brow");row.appendChild(div("lab",r[0]+(r[1]?"<small>"+r[1]+"</small>":"")));
+    var t=div("bars track");
+    [[r[2],""],[r[3],"2"]].forEach(function(p){var b=div("b c-"+r[4]+p[1]);b.style.width=(100*p[0]/mx)+"%";b.innerHTML="<em>"+p[0].toFixed(4)+"</em>";t.appendChild(b);});
+    row.appendChild(t);host.appendChild(row);
+  });
+  // Figure 4: paired differences with CIs, domain [-30, +30]
+  var P=[["all pixels",-0.29,-1.20,0.65],["sensor-confident",-0.49,-1.30,0.32],["depth edges",-2.34,-4.41,-0.05],["thin / near structures",-24.8,-28.6,-21.0],
+         ["holes (no LiDAR return)",3.46,-1.66,9.21],["sensor confidently wrong",17.0,12.8,21.7],["range 0–1 m",-2.16,-3.02,-1.22],["range 2–3 m",3.84,1.82,6.31],["range 3–4 m",8.91,3.58,15.57]];
+  var lo=-30,hi=30,ph=document.getElementById("paired");
+  function pos(v){return 100*(v-lo)/(hi-lo);}
+  P.forEach(function(r){
+    var row=div("brow");row.appendChild(div("lab",r[0]));
+    var t=div("dtrack"),better=r[1]<0,a=Math.min(r[1],0),b=Math.max(r[1],0);
+    var bar=div("bar2 "+(better?"c-ours":"c-prior"));bar.style.left=pos(a)+"%";bar.style.width=(pos(b)-pos(a))+"%";t.appendChild(bar);
+    var ci=div("ci");ci.style.left=pos(r[2])+"%";ci.style.width=(pos(r[3])-pos(r[2]))+"%";t.appendChild(ci);
+    var z=div("zero");z.style.left=pos(0)+"%";t.appendChild(z);
+    var v=div("v",(r[1]>0?"+":"−")+Math.abs(r[1]).toFixed(1)+" %");
+    v.style.left=pos(Math.max(r[3],b,0))+"%";v.style.paddingLeft="8px";
+    t.appendChild(v);row.appendChild(t);ph.appendChild(row);
+  });
+  // Figure 2: latency stacks (ms): prompt, vit(+head), neck+heads, refiner, fit+copies
+  var L=[["Model A","480×640",[2.7,99.2,20.3,27.3,1.3],152.5],["Model B","240×320",[2.7,100.3,13.2,10.4,1.6],128.8]];
+  var cls=["c-sensor","c-frozen","c-tuned","c-ours","c-prior"],lh=document.getElementById("lat");
+  L.forEach(function(r){
+    var row=div("stackrow");row.appendChild(div("","<b>"+r[0]+"</b><br><span style='color:var(--muted);font-size:12px'>"+r[1]+"</span>"));
+    var wrap=div(""),s=div("stack");s.style.width=(100*r[3]/160)+"%";
+    r[2].forEach(function(ms,i){var sp=document.createElement("span");sp.className=cls[i];sp.style.width=(100*ms/r[3])+"%";sp.title=ms+" ms";s.appendChild(sp);});
+    wrap.appendChild(s);row.appendChild(wrap);row.appendChild(div("tot",r[3].toFixed(1)+" ms"));lh.appendChild(row);
+  });
+})();
+</script>
+</body>
+</html>

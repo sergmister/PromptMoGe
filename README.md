@@ -13,7 +13,8 @@ Core ML, the sparse 3-D refiner on custom int8 Metal kernels.
 | **Model A** | 480×640 | int8 | **152 ms** |
 | **Model B** | 240×320 | int8 | **129 ms** |
 
-*Visuals coming soon.*
+A web report with the method, architecture diagram and all benchmark results is in [`docs/index.html`](docs/index.html).
+*Real-world captures coming soon.*
 
 ## Why
 
