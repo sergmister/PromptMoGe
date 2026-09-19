@@ -98,37 +98,6 @@ tr.grp td{font-size:12.5px;letter-spacing:.03em;text-transform:uppercase;color:v
 td.best{font-weight:600;color:var(--ours)}
 td.worse{color:var(--prior)}
 
-/* charts */
-.chart{background:var(--surface);border:1px solid var(--rule);border-radius:4px;padding:18px 18px 14px;font-family:var(--sans);font-size:13.5px}
-.legend{display:flex;gap:16px;flex-wrap:wrap;color:var(--muted);font-size:12.5px;margin-bottom:12px}
-.legend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:6px;vertical-align:-1px}
-.brow{display:grid;grid-template-columns:minmax(120px,230px) 1fr;gap:12px;align-items:center;padding:5px 0}
-.brow .lab{line-height:1.25}
-.brow .lab small{display:block;color:var(--muted);font-size:12px}
-.bars{display:flex;flex-direction:column;gap:3px}
-.b{height:11px;border-radius:2px;position:relative;min-width:2px}
-.b em{position:absolute;left:100%;top:50%;transform:translateY(-50%);margin-left:6px;font-style:normal;font-family:var(--mono);font-size:11.5px;color:var(--ink);white-space:nowrap}
-.track{padding-right:54px}
-.c-ours{background:var(--ours)} .c-ours2{background:color-mix(in srgb,var(--ours) 45%,transparent)}
-.c-prior{background:var(--prior)} .c-prior2{background:color-mix(in srgb,var(--prior) 45%,transparent)}
-.c-sensor{background:var(--sensor)} .c-sensor2{background:color-mix(in srgb,var(--sensor) 45%,transparent)}
-.c-frozen{background:var(--frozen)} .c-tuned{background:var(--tuned)}
-
-.div .brow{grid-template-columns:minmax(110px,190px) 1fr}
-.dtrack{position:relative;height:22px}
-.dtrack .zero{position:absolute;top:-5px;bottom:-5px;width:1px;background:var(--ink);opacity:.55}
-.dtrack .bar2{position:absolute;top:5px;height:12px;border-radius:2px}
-.dtrack .ci{position:absolute;top:10px;height:2px;background:var(--ink);opacity:.75}
-.dtrack .v{position:absolute;top:2px;font-family:var(--mono);font-size:11.5px;white-space:nowrap}
-.axis{display:grid;grid-template-columns:minmax(110px,190px) 1fr;gap:12px;color:var(--muted);font-size:11.5px;font-family:var(--mono);margin-top:4px}
-.ticks{display:flex;justify-content:space-between}
-
-.stack{display:flex;height:26px;border-radius:3px;overflow:hidden}
-.stack span{display:block;height:100%}
-.stackrow{display:grid;grid-template-columns:90px 1fr 70px;gap:12px;align-items:center;padding:6px 0}
-.stackrow b{font-weight:600}
-.stackrow .tot{font-family:var(--mono);text-align:right}
-
 /* diagram */
 svg text{font-family:var(--sans);fill:var(--ink)}
 svg .t{font-size:12.5px} svg .ts{font-size:11px;fill:var(--muted)} svg .th{font-size:13px;font-weight:600}
@@ -380,15 +349,23 @@ pre{font-family:var(--mono);font-size:12.5px;background:var(--surface);border:1p
 </section>
 
 <figure class="wide">
-  <div class="chart">
-    <div class="legend">
-      <span><i class="c-sensor"></i>prompt (CPU + GPU/ANE)</span><span><i class="c-frozen"></i>ViT: attention on GPU, MLPs on ANE</span>
-      <span><i class="c-tuned"></i>neck + heads (ANE)</span><span><i class="c-ours"></i>sparse refiner, K = 1 (Metal)</span><span><i class="c-prior"></i>metric fit + host copies</span>
-    </div>
-    <div id="lat"></div>
-    <div class="axis" style="grid-template-columns:90px 1fr 70px"><div></div><div class="ticks"><span>0</span><span>40</span><span>80</span><span>120</span><span>160 ms</span></div><div></div></div>
-  </div>
-  <figcaption><b>Figure 2.</b> Measured end-to-end latency on an iPad Pro M5 (warm, best of 10; medians are 1 ms higher), from camera frame to metric depth. Each extra refinement step costs about 23 ms (A) or 11 ms (B). On-device depth differs from the PyTorch reference by 0.15&nbsp;% (A) and 0.17&nbsp;% (B) with identical masks. Both models share the ViT, so Model B's saving is all downstream of it.</figcaption>
+  <div class="tw"><table>
+    <thead><tr><th>stage · ms, K = 1</th><th class="l">runs on</th><th>Model A · 480×640</th><th>Model B · 240×320</th></tr></thead>
+    <tbody>
+    <tr><td>prompt build, nearest-fill</td><td class="l">CPU</td><td>0.8</td><td>0.8</td></tr>
+    <tr><td>prompt stem</td><td class="l">GPU</td><td>1.9</td><td>1.9</td></tr>
+    <tr><td>prompt pyramid</td><td class="l">Neural Engine, overlapped with the ViT (time spent waiting for it)</td><td>0.0</td><td>0.0</td></tr>
+    <tr><td>ViT, 24 blocks</td><td class="l">attention on GPU, MLPs on Neural Engine</td><td>97.4</td><td>98.5</td></tr>
+    <tr><td>encoder head</td><td class="l">Neural Engine</td><td>1.8</td><td>1.8</td></tr>
+    <tr><td>neck + point and mask heads</td><td class="l">Neural Engine</td><td>20.3</td><td>13.2</td></tr>
+    <tr><td>copy into Metal buffers</td><td class="l">CPU</td><td>0.5</td><td>0.5</td></tr>
+    <tr><td>sparse refiner, one step</td><td class="l">GPU, int8 Metal kernels</td><td>27.3</td><td>10.4</td></tr>
+    <tr><td>metric fit + depth</td><td class="l">GPU</td><td>0.8</td><td>1.1</td></tr>
+    <tr class="ours"><td>end to end, best / median of 10</td><td class="l"></td><td>152.5 / 153.6</td><td>128.8 / 129.8</td></tr>
+    <tr><td>each further refinement step</td><td class="l"></td><td>≈ 23</td><td>≈ 11</td></tr>
+    <tr><td>depth error vs the PyTorch reference</td><td class="l"></td><td>0.15 %</td><td>0.17 %</td></tr>
+    </tbody></table></div>
+  <figcaption><b>Table 2.</b> Measured latency on an iPad Pro M5, warm, from camera frame to metric depth (per-stage best; mask agreement with the reference is 100&nbsp;%). Both models share the ViT, so Model B's saving is all downstream of it.</figcaption>
 </figure>
 
 <section class="col" id="results">
@@ -400,20 +377,35 @@ pre{font-family:var(--mono);font-size:12.5px;background:var(--surface);border:1p
 </section>
 
 <figure class="wide">
-  <div class="chart">
-    <div class="legend"><span><i class="c-frozen"></i>all pixels</span><span><i class="c-frozen" style="opacity:.5"></i>sensor-confident pixels</span></div>
-    <div id="vdev"></div>
-  </div>
-  <figcaption><b>Figure 3.</b> AbsRel on 61 held-out rooms (lower is better). The network is worth 15&nbsp;% over the calibrated sensor — 27&nbsp;% in low-confidence regions and 29&nbsp;% in holes — and is better in every one of the 61 rooms (paired figures measured on the preceding checkpoint; the released teacher is a further 0.6–0.8&nbsp;% better). Model A costs +0.4&nbsp;%; Model B +3&nbsp;%, mostly on thin structures. Sensor rows and Model B are scored at stride 2, the rest at stride 4; Model B on its own 240×320 grid.</figcaption>
+  <div class="tw"><table>
+    <thead><tr><th>AbsRel ↓ · 61 rooms</th><th>tokens</th><th>all</th><th>confident</th><th>low-conf</th><th>holes</th><th>edges</th><th>thin</th><th>sensor wrong</th></tr></thead>
+    <tbody>
+    <tr><td>raw ARKit LiDAR</td><td>–</td><td>0.0206</td><td>0.0189</td><td>0.0563</td><td>0.0635</td><td>0.1030</td><td>0.1123</td><td>0.2637</td></tr>
+    <tr><td>LiDAR + depth calibration, no network</td><td>–</td><td>0.0131</td><td>0.0111</td><td>0.0556</td><td>0.0641</td><td>0.1014</td><td>0.1202</td><td>0.2629</td></tr>
+    <tr><td>PromptDA‑L as released</td><td>3 888</td><td>0.0115</td><td>0.0102</td><td>0.0405</td><td class="best">0.0451</td><td>0.0887</td><td>0.1265</td><td>0.1735</td></tr>
+    <tr><td>PromptDA‑L + our attachment</td><td>3 888</td><td>0.0112</td><td>0.0099</td><td>0.0402</td><td class="best">0.0451</td><td>0.0886</td><td>0.1256</td><td class="best">0.1730</td></tr>
+    <tr class="ours"><td>PromptMoGe‑L</td><td>1 200</td><td class="best">0.0112</td><td class="best">0.0099</td><td>0.0402</td><td>0.0467</td><td class="best">0.0865</td><td class="best">0.0944</td><td>0.2023</td></tr>
+    <tr class="ours"><td>Model A (on-device)</td><td>1 200</td><td>0.0112</td><td>0.0099</td><td>0.0405</td><td>0.0468</td><td>0.0867</td><td>0.0947</td><td>0.2025</td></tr>
+    <tr class="ours"><td>Model B (on-device, own 240×320 grid)</td><td>1 200</td><td>0.0118</td><td>0.0103</td><td>–</td><td>–</td><td>–</td><td>–</td><td>–</td></tr>
+    </tbody></table></div>
+  <figcaption><b>Table 3.</b> AbsRel on 61 held-out rooms by pixel stratum. The network is worth 15&nbsp;% over the calibrated sensor — 27&nbsp;% in low-confidence regions and 29&nbsp;% in holes — and is better in every one of the 61 rooms (paired figures measured on the preceding checkpoint; the released teacher is a further 0.6–0.8&nbsp;% better). Model A costs +0.4&nbsp;%; Model B +3&nbsp;%, mostly on thin structures. Sensor rows and Model B are scored at stride 2, the rest at stride 4.</figcaption>
 </figure>
 
 <figure class="wide">
-  <div class="chart div">
-    <div class="legend"><span><i class="c-ours"></i>PromptMoGe‑L better</span><span><i class="c-prior"></i>PromptDA‑L better</span><span>— 95 % interval over rooms</span></div>
-    <div id="paired"></div>
-    <div class="axis"><div></div><div class="ticks"><span>−30 %</span><span>−20</span><span>−10</span><span>0</span><span>+10</span><span>+20</span><span>+30 %</span></div></div>
-  </div>
-  <figcaption><b>Figure 4.</b> Paired error difference, PromptMoGe‑L against PromptDA‑L <em>with our attachment</em>, by pixel stratum. Pooled error is a tie (−0.3&nbsp;% [−1.2, +0.7]); against PromptDA as released it is −2.8&nbsp;% [−5.4, −0.2]. The two models have opposite strengths: ours is far better on thin and near structures and at close range; PromptDA is better where the sensor is confidently wrong (glass, mirrors) and beyond 2 m. Model A gives the same picture (thin −24.6&nbsp;%, pooled +0.1&nbsp;%).</figcaption>
+  <div class="tw"><table>
+    <thead><tr><th>PromptMoGe‑L relative to …</th><th>PromptDA‑L + our attachment</th><th>PromptDA‑L as released</th></tr></thead>
+    <tbody>
+    <tr><td>all pixels</td><td>−0.3 % [−1.2, +0.7]</td><td class="best">−2.8 % [−5.4, −0.2]</td></tr>
+    <tr><td>sensor-confident pixels</td><td>−0.5 % [−1.3, +0.3]</td><td class="best">−3.3 % [−6.3, −0.4]</td></tr>
+    <tr><td>depth edges</td><td class="best">−2.3 % [−4.4, −0.1]</td><td class="best">−2.4 % [−4.5, −0.1]</td></tr>
+    <tr><td>thin / near structures</td><td class="best">−24.8 % [−28.6, −21.0]</td><td class="best">−25.3 % [−29.1, −21.6]</td></tr>
+    <tr><td>holes (no LiDAR return)</td><td>+3.5 % [−1.7, +9.2]</td><td>+3.4 % [−1.6, +9.0]</td></tr>
+    <tr><td>sensor confidently wrong</td><td class="worse">+17.0 % [+12.8, +21.7]</td><td class="worse">+16.6 % [+12.2, +21.7]</td></tr>
+    <tr><td>range 0–1 m</td><td class="best">−2.2 % [−3.0, −1.2]</td><td class="best">−4.3 % [−7.3, −1.2]</td></tr>
+    <tr><td>range 2–3 m</td><td class="worse">+3.8 % [+1.8, +6.3]</td><td class="worse">+4.0 % [+0.1, +8.2]</td></tr>
+    <tr><td>range 3–4 m</td><td class="worse">+8.9 % [+3.6, +15.6]</td><td>+1.5 % [−10.1, +14.9]</td></tr>
+    </tbody></table></div>
+  <figcaption><b>Table 4.</b> Paired difference in AbsRel over the 61 rooms, with 95&nbsp;% intervals from resampling rooms; negative favours PromptMoGe‑L, coloured where the interval excludes zero. Pooled error is a tie under identical attachment and a win against PromptDA as released. The two models have opposite strengths: ours is far better on thin and near structures and at close range; PromptDA is better where the sensor is confidently wrong (glass, mirrors) and beyond 2 m. Model A gives the same picture (thin −24.6&nbsp;%, pooled +0.1&nbsp;%).</figcaption>
 </figure>
 
 <section class="col">
@@ -435,7 +427,7 @@ pre{font-family:var(--mono);font-size:12.5px;background:var(--surface);border:1p
     <tr><td>PromptDA‑L [2]</td><td>0.0132</td><td>0.0315</td><td>–</td><td class="l"></td></tr>
     <tr><td>MSPF</td><td>0.0149</td><td>0.0362</td><td>–</td><td class="l"></td></tr>
     </tbody></table></div>
-  <figcaption><b>Table 2.</b> Official ARKitScenes depth-upsampling protocol, development partition.</figcaption>
+  <figcaption><b>Table 5.</b> Official ARKitScenes depth-upsampling protocol, development partition.</figcaption>
 </figure>
 
 <section class="col">
@@ -455,7 +447,7 @@ pre{font-family:var(--mono);font-size:12.5px;background:var(--surface);border:1p
     <tr><td>KITTI <span class="note">(driving)</span></td><td>0.0385</td><td>0.0364</td><td class="best">0.0289</td><td>0.0986</td><td class="best">0.0550</td><td>0.0778</td><td>0.0777</td></tr>
     <tr><td>DIODE outdoor</td><td class="best">0.0212</td><td>0.0417</td><td>0.0335</td><td class="best">0.0377</td><td>0.0985</td><td>0.0498</td><td>0.0450</td></tr>
     </tbody></table></div>
-  <figcaption><b>Table 3.</b> Zero-shot AbsRel. PromptMoGe‑L is ahead of PromptDA‑L on six of seven datasets under both prompts (by 16–32&nbsp;% with the masked prompt) and behind on outdoor DIODE, far from its indoor training range. When a very sparse prompt leaves large gaps (KITTI, masked), ignoring the prompt and fitting RGB-only geometry to it wins — an argument for a learned trust mechanism.</figcaption>
+  <figcaption><b>Table 6.</b> Zero-shot AbsRel. PromptMoGe‑L is ahead of PromptDA‑L on six of seven datasets under both prompts (by 16–32&nbsp;% with the masked prompt) and behind on outdoor DIODE, far from its indoor training range. When a very sparse prompt leaves large gaps (KITTI, masked), ignoring the prompt and fitting RGB-only geometry to it wins — an argument for a learned trust mechanism.</figcaption>
 </figure>
 
 <section class="col">
@@ -472,7 +464,7 @@ pre{font-family:var(--mono);font-size:12.5px;background:var(--surface);border:1p
     <tr class="ours"><td>PromptMoGe‑L</td><td class="best">0.788</td><td class="best">0.898</td><td>3.63</td><td>1.06</td><td class="best">13.5</td></tr>
     <tr class="ours"><td>Model A (on-device)</td><td class="best">0.788</td><td class="best">0.898</td><td class="best">3.62</td><td>1.06</td><td class="best">13.5</td></tr>
     </tbody></table></div>
-  <figcaption><b>Table 4.</b> TSDF fusion over 61 held-out rooms, means over rooms; normals at the 2 cm setting. The reference surface is fused laser-scan depth on the same poses, not an independent laser mesh.</figcaption>
+  <figcaption><b>Table 7.</b> TSDF fusion over 61 held-out rooms, means over rooms; normals at the 2 cm setting. The reference surface is fused laser-scan depth on the same poses, not an independent laser mesh.</figcaption>
 </figure>
 
 <section class="col">
@@ -489,7 +481,7 @@ pre{font-family:var(--mono);font-size:12.5px;background:var(--surface);border:1p
     <tr class="ours"><td>PromptMoGe‑L</td><td class="best">0.0138</td><td class="best">0.0139</td><td class="best">0.0140</td><td class="best">0.0188</td><td class="best">0.0227</td><td class="best">0.0140</td><td>0.0142</td></tr>
     <tr class="ours"><td>Model A (on-device)</td><td class="best">0.0138</td><td class="best">0.0139</td><td>0.0141</td><td>0.0189</td><td class="worse">0.0290</td><td class="best">0.0140</td><td class="best">0.0141</td></tr>
     </tbody></table></div>
-  <figcaption><b>Table 5.</b> Prompt perturbations (dropout columns with the nearest-filled prompt for every model). Without the fill, scattered holes are an out-of-distribution pattern that doubles to quadruples our error — a preprocessing requirement, not an information limit.</figcaption>
+  <figcaption><b>Table 8.</b> Prompt perturbations (dropout columns with the nearest-filled prompt for every model). Without the fill, scattered holes are an out-of-distribution pattern that doubles to quadruples our error — a preprocessing requirement, not an information limit.</figcaption>
 </figure>
 
 <section class="col" id="ablations">
@@ -511,7 +503,7 @@ pre{font-family:var(--mono);font-size:12.5px;background:var(--surface);border:1p
     <tr><td>Model A</td><td>+0.4 %</td><td>+0.4 %</td><td>+0.3 %</td><td>0.0 %</td><td>−0.2 %</td><td>0.0 %</td><td class="l"></td></tr>
     <tr><td>Model B (own 240×320 grid, vs A)</td><td class="worse">+2.7 %</td><td>+2.4 %</td><td>–</td><td>+4.1 %</td><td class="worse">+7.3 %</td><td>–</td><td class="l"></td></tr>
     </tbody></table></div>
-  <figcaption><b>Table 6.</b> The neck pyramid carries the benefit; token injection adds thin-structure accuracy and is the only path that helps where the sensor is wrong. The final stage's gains hold across two seeds. Model B at K = 3 is worse than at K = 1 in 60 of 61 rooms, so we do not recommend it.</figcaption>
+  <figcaption><b>Table 9.</b> The neck pyramid carries the benefit; token injection adds thin-structure accuracy and is the only path that helps where the sensor is wrong. The final stage's gains hold across two seeds. Model B at K = 3 is worse than at K = 1 in 60 of 61 rooms, so we do not recommend it.</figcaption>
 </figure>
 
 <section class="col">
@@ -593,42 +585,6 @@ pre{font-family:var(--mono);font-size:12.5px;background:var(--surface);border:1p
     ng.appendChild(el("path",{d:"M"+gx2+" "+(gy2-9)+" V148","class":"ln-ours","marker-end":"url(#ah)"}));
   }
 
-  function div(cls,html){var d=document.createElement("div");d.className=cls;if(html!=null)d.innerHTML=html;return d;}
-  // Figure 3: absolute AbsRel on 61 rooms
-  var V=[["raw ARKit LiDAR","",0.0206,0.0189,"sensor"],["LiDAR + depth calibration","no network",0.0131,0.0111,"sensor"],
-         ["PromptDA‑L as released","3 888 tokens",0.01152,0.01022,"prior"],["PromptDA‑L + our attachment","3 888 tokens",0.01123,0.00993,"prior"],
-         ["PromptMoGe‑L","1 200 tokens",0.01120,0.00988,"ours"],["Model A · on-device","480×640",0.01125,0.00992,"ours"],["Model B · on-device","240×320",0.0118,0.0103,"ours"]];
-  var host=document.getElementById("vdev"),mx=0.0206;
-  V.forEach(function(r){
-    var row=div("brow");row.appendChild(div("lab",r[0]+(r[1]?"<small>"+r[1]+"</small>":"")));
-    var t=div("bars track");
-    [[r[2],""],[r[3],"2"]].forEach(function(p){var b=div("b c-"+r[4]+p[1]);b.style.width=(100*p[0]/mx)+"%";b.innerHTML="<em>"+p[0].toFixed(4)+"</em>";t.appendChild(b);});
-    row.appendChild(t);host.appendChild(row);
-  });
-  // Figure 4: paired differences with CIs, domain [-30, +30]
-  var P=[["all pixels",-0.29,-1.20,0.65],["sensor-confident",-0.49,-1.30,0.32],["depth edges",-2.34,-4.41,-0.05],["thin / near structures",-24.8,-28.6,-21.0],
-         ["holes (no LiDAR return)",3.46,-1.66,9.21],["sensor confidently wrong",17.0,12.8,21.7],["range 0–1 m",-2.16,-3.02,-1.22],["range 2–3 m",3.84,1.82,6.31],["range 3–4 m",8.91,3.58,15.57]];
-  var lo=-30,hi=30,ph=document.getElementById("paired");
-  function pos(v){return 100*(v-lo)/(hi-lo);}
-  P.forEach(function(r){
-    var row=div("brow");row.appendChild(div("lab",r[0]));
-    var t=div("dtrack"),better=r[1]<0,a=Math.min(r[1],0),b=Math.max(r[1],0);
-    var bar=div("bar2 "+(better?"c-ours":"c-prior"));bar.style.left=pos(a)+"%";bar.style.width=(pos(b)-pos(a))+"%";t.appendChild(bar);
-    var ci=div("ci");ci.style.left=pos(r[2])+"%";ci.style.width=(pos(r[3])-pos(r[2]))+"%";t.appendChild(ci);
-    var z=div("zero");z.style.left=pos(0)+"%";t.appendChild(z);
-    var v=div("v",(r[1]>0?"+":"−")+Math.abs(r[1]).toFixed(1)+" %");
-    v.style.left=pos(Math.max(r[3],b,0))+"%";v.style.paddingLeft="8px";
-    t.appendChild(v);row.appendChild(t);ph.appendChild(row);
-  });
-  // Figure 2: latency stacks (ms): prompt, vit(+head), neck+heads, refiner, fit+copies
-  var L=[["Model A","480×640",[2.7,99.2,20.3,27.3,1.3],152.5],["Model B","240×320",[2.7,100.3,13.2,10.4,1.6],128.8]];
-  var cls=["c-sensor","c-frozen","c-tuned","c-ours","c-prior"],lh=document.getElementById("lat");
-  L.forEach(function(r){
-    var row=div("stackrow");row.appendChild(div("","<b>"+r[0]+"</b><br><span style='color:var(--muted);font-size:12px'>"+r[1]+"</span>"));
-    var wrap=div(""),s=div("stack");s.style.width=(100*r[3]/160)+"%";
-    r[2].forEach(function(ms,i){var sp=document.createElement("span");sp.className=cls[i];sp.style.width=(100*ms/r[3])+"%";sp.title=ms+" ms";s.appendChild(sp);});
-    wrap.appendChild(s);row.appendChild(wrap);row.appendChild(div("tot",r[3].toFixed(1)+" ms"));lh.appendChild(row);
-  });
 })();
 </script>
 </body>
