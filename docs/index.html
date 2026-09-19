@@ -138,7 +138,7 @@ pre{font-family:var(--mono);font-size:12.5px;background:var(--surface);border:1p
     <a class="soon" href="#visuals">Real-world captures — coming soon</a>
   </div>
   <div class="facts">
-    <div class="fact"><b>152 ms</b><span>Model A, 480×640 metric point map, end to end on an iPad Pro M5 (Model B: 129 ms)</span></div>
+    <div class="fact"><b>152 ms</b><span>Model A, 480×640 metric point map, end to end on an iPad Pro 11-inch (M5) (Model B: 129 ms)</span></div>
     <div class="fact"><b>−25 %</b><span>thin-structure error against PromptDA‑L on 61 held-out rooms, at a third of its tokens</span></div>
     <div class="fact"><b>61 / 61</b><span>rooms where it beats the calibrated LiDAR; −15 % error overall, −46 % against the raw sensor</span></div>
     <div class="fact"><b>+0.4 %</b><span>accuracy cost of the on-device Model A relative to the full-size teacher</span></div>
@@ -337,7 +337,7 @@ pre{font-family:var(--mono);font-size:12.5px;background:var(--surface);border:1p
 
 <section class="col" id="device">
   <h2>Running it on an iPad</h2>
-  <p>Profiled module by module, the full model costs 296 ms per frame on an iPad Pro M5 — and its refiner's voxel structure alone took 82 ms to build. Two things close the gap to 152 ms: a smaller model that computes the same function, and a runtime that puts every piece on the processor that is fastest at it.</p>
+  <p>Profiled module by module, the full model costs 296 ms per frame on our test device, an iPad Pro 11-inch (M5) — and its refiner's voxel structure alone took 82 ms to build. Two things close the gap to 152 ms: a smaller model that computes the same function, and a runtime that puts every piece on the processor that is fastest at it.</p>
   <h3>Compression without an accuracy bill (Model A)</h3>
   <ul>
     <li><b>Re-scheduled prompt pyramid.</b> One 256→256 convolution at 480×640 was 84&nbsp;% of the prompt path's 431 GFLOPs, feeding the neck level where the injection matters least (0.25&nbsp;% of the activation it joins). Mirroring the neck's widths and regressing the new pyramid onto the old one's five outputs (two minutes of training) cuts the path to 29 GFLOPs with every metric within ±0.5&nbsp;%.</li>
@@ -366,7 +366,7 @@ pre{font-family:var(--mono);font-size:12.5px;background:var(--surface);border:1p
     <tr><td>each further refinement step</td><td class="l"></td><td>≈ 23</td><td>≈ 11</td></tr>
     <tr><td>depth error vs the PyTorch reference</td><td class="l"></td><td>0.15 %</td><td>0.17 %</td></tr>
     </tbody></table></div>
-  <figcaption><b>Table 2.</b> Measured latency on an iPad Pro M5, warm, from camera frame to metric depth (per-stage best; mask agreement with the reference is 100&nbsp;%). Both models share the ViT, so Model B's saving is all downstream of it.</figcaption>
+  <figcaption><b>Table 2.</b> Measured latency on an iPad Pro 11-inch (M5) (model iPad17,1, 256 GB, iOS 27 beta), warm, from camera frame to metric depth (per-stage best; mask agreement with the reference is 100&nbsp;%). Both models share the ViT, so Model B's saving is all downstream of it.</figcaption>
 </figure>
 
 <section class="col" id="results">

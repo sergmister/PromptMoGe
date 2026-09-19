@@ -7,13 +7,14 @@ iPhone Pro and iPad Pro already produces (256×192, with confidence), and return
 Two compressed variants run end to end on an iPad Pro: the dense network on the Neural Engine and GPU through
 Core ML, the sparse 3-D refiner on custom int8 Metal kernels.
 
-| | output | refiner | iPad Pro M5, end to end |
+| | output | refiner | iPad Pro 11-inch (M5), end to end |
 |---|---|---|---|
 | **PromptMoGe-L** (teacher) | any resolution | fp16 | — (CUDA / CPU) |
 | **Model A** | 480×640 | int8 | **152 ms** |
 | **Model B** | 240×320 | int8 | **129 ms** |
 
 A web report with the method, architecture diagram and all benchmark results is in [`docs/index.html`](docs/index.html).
+Latencies are measured on an iPad Pro 11-inch (M5) (iPad17,1, iOS 27 beta), warm, one refinement step.
 *Real-world captures coming soon.*
 
 ## Why
