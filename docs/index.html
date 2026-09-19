@@ -6,104 +6,102 @@
 <title>PromptMoGe</title>
 <meta name="description" content="Metric depth from one RGB frame and a phone LiDAR: LiDAR-prompted MoGe-3, compressed to run end to end on an iPad.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Serif:ital,wght@0,400;0,500;1,400&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;700&family=Noto+Sans:ital,wght@0,400;0,500;0,700;1,400&display=swap">
 <style>
 :root{
-  --bg:#F5F7F8; --surface:#FFFFFF; --ink:#12202B; --muted:#55626D; --rule:#D5DCE1;
-  --ours:#12806F; --ours-soft:#D8EEE9; --prior:#5B4B9A; --prior-soft:#E5E1F3;
-  --sensor:#A86B12; --sensor-soft:#F6E8CC; --tuned:#2B6CB0; --tuned-soft:#DCE9F6;
-  --frozen:#7C8892; --frozen-soft:#E6EAED;
-  --sans:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
-  --serif:"IBM Plex Serif",Georgia,"Times New Roman",serif;
-  --mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+  --bg:#FFFFFF; --band:#F6F7F9; --surface:#FFFFFF; --ink:#2B2F36; --muted:#6B727C; --rule:#E1E4E8; --link:#2A6FDB;
+  --btn:#2B2F36; --btn-ink:#FFFFFF; --hl:#EEF5FF;
+  --ours:#1B8A6B; --ours-soft:#DDF1EA; --prior:#6A55B5; --prior-soft:#E8E3F6;
+  --sensor:#B07414; --sensor-soft:#F8EBD0; --tuned:#2A6FDB; --tuned-soft:#DFEAFB;
+  --frozen:#8A929C; --frozen-soft:#ECEEF1;
+  --title:"Google Sans","Noto Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --sans:"Noto Sans",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
 }
 @media (prefers-color-scheme: dark){
   :root:not([data-theme="light"]){
-    --bg:#0E151B; --surface:#152028; --ink:#E6EDF2; --muted:#9AA8B3; --rule:#26343F;
-    --ours:#3CC9B0; --ours-soft:#12352F; --prior:#A99BE6; --prior-soft:#2A2447;
-    --sensor:#E5B454; --sensor-soft:#3A2E12; --tuned:#6FB1F0; --tuned-soft:#14293D;
-    --frozen:#8795A1; --frozen-soft:#1E2A33;
+    --bg:#14171C; --band:#1A1E25; --surface:#1A1E25; --ink:#E4E7EB; --muted:#9BA3AE; --rule:#2C323B; --link:#7FB0FF;
+    --btn:#E4E7EB; --btn-ink:#14171C; --hl:#1B2A40;
+    --ours:#4CCBA6; --ours-soft:#15352C; --prior:#AE9CF0; --prior-soft:#2A2447;
+    --sensor:#E6B656; --sensor-soft:#3A2E12; --tuned:#7FB0FF; --tuned-soft:#182A45;
+    --frozen:#8C96A2; --frozen-soft:#232A33;
   }
 }
 :root[data-theme="dark"]{
-  --bg:#0E151B; --surface:#152028; --ink:#E6EDF2; --muted:#9AA8B3; --rule:#26343F;
-  --ours:#3CC9B0; --ours-soft:#12352F; --prior:#A99BE6; --prior-soft:#2A2447;
-  --sensor:#E5B454; --sensor-soft:#3A2E12; --tuned:#6FB1F0; --tuned-soft:#14293D;
-  --frozen:#8795A1; --frozen-soft:#1E2A33;
+  --bg:#14171C; --band:#1A1E25; --surface:#1A1E25; --ink:#E4E7EB; --muted:#9BA3AE; --rule:#2C323B; --link:#7FB0FF;
+  --btn:#E4E7EB; --btn-ink:#14171C; --hl:#1B2A40;
+  --ours:#4CCBA6; --ours-soft:#15352C; --prior:#AE9CF0; --prior-soft:#2A2447;
+  --sensor:#E6B656; --sensor-soft:#3A2E12; --tuned:#7FB0FF; --tuned-soft:#182A45;
+  --frozen:#8C96A2; --frozen-soft:#232A33;
 }
 *{box-sizing:border-box}
 html{scroll-behavior:smooth}
 @media (prefers-reduced-motion: reduce){html{scroll-behavior:auto}}
-body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--serif);font-size:17px;line-height:1.62;
-  padding-inline:20px;-webkit-font-smoothing:antialiased}
-a{color:var(--ours);text-decoration-thickness:1px;text-underline-offset:3px}
-a:focus-visible,button:focus-visible{outline:2px solid var(--ours);outline-offset:2px}
-.col{max-width:68ch;margin-inline:auto}
-.wide{max-width:1080px;margin-inline:auto}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:16.5px;line-height:1.65;padding-inline:20px;-webkit-font-smoothing:antialiased}
+a{color:var(--link);text-decoration:none}
+a:hover{text-decoration:underline}
+a:focus-visible{outline:2px solid var(--link);outline-offset:2px}
+.col{max-width:860px;margin-inline:auto}
+.wide{max-width:1100px;margin-inline:auto}
 
-/* top bar */
-.bar{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);border-bottom:1px solid var(--rule);margin-inline:-20px;padding:10px 20px}
-.bar nav{max-width:1080px;margin-inline:auto;display:flex;gap:18px;flex-wrap:wrap;align-items:baseline;font-family:var(--sans);font-size:13.5px}
-.bar .name{font-weight:600;letter-spacing:.01em;color:var(--ink);text-decoration:none;margin-right:6px}
-.bar a{color:var(--muted);text-decoration:none}
-.bar a:hover{color:var(--ink)}
+/* title block */
+header.hero{text-align:center;padding-block:64px 24px}
+h1{font-family:var(--title);font-weight:700;font-size:clamp(1.9rem,4.4vw,2.9rem);line-height:1.15;margin:0 auto .55em;max-width:22ch;text-wrap:balance}
+h1 .sub{display:block;font-weight:400;font-size:.58em;line-height:1.3;margin-top:.45em;color:var(--ink)}
+.byline{font-family:var(--title);font-size:1.25rem;margin:0 0 4px}
+.byline a{color:var(--link)}
+.venue{font-size:1rem;color:var(--muted);margin:0 0 22px}
+.links{display:flex;gap:10px;flex-wrap:wrap;justify-content:center}
+.links a{display:inline-flex;align-items:center;gap:8px;background:var(--btn);color:var(--btn-ink);padding:9px 20px;border-radius:999px;font-size:15.5px;font-weight:500}
+.links a:hover{text-decoration:none;opacity:.85}
+.links a.soon{background:transparent;color:var(--muted);box-shadow:inset 0 0 0 1.5px var(--rule)}
+.links svg{width:17px;height:17px;fill:currentColor}
 
-/* header */
-header.hero{padding-block:56px 28px}
-.kicker{font-family:var(--mono);font-size:12.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
-h1{font-family:var(--sans);font-weight:600;font-size:clamp(2rem,4.6vw,3.1rem);line-height:1.08;letter-spacing:-.015em;margin:.35em 0 .4em;text-wrap:balance}
-.lede{font-size:1.18rem;line-height:1.5;max-width:60ch;margin:0 0 22px}
-.byline{font-family:var(--sans);font-size:15px;font-weight:500;margin:0 0 20px}
-.links{display:flex;gap:10px;flex-wrap:wrap;font-family:var(--sans);font-size:14.5px}
-.links a{border:1px solid var(--rule);background:var(--surface);color:var(--ink);padding:7px 14px;border-radius:4px;text-decoration:none}
-.links a:hover{border-color:var(--ours)}
-.links a.soon{color:var(--muted);border-style:dashed}
-
-.facts{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:0;border-block:1px solid var(--rule);margin-block:34px 8px}
-.fact{padding:18px 18px 16px 0;border-right:1px solid var(--rule);margin-right:18px}
-.fact:last-child{border-right:0;margin-right:0}
-.fact b{display:block;font-family:var(--sans);font-weight:600;font-size:1.9rem;letter-spacing:-.02em;font-variant-numeric:tabular-nums;color:var(--ours)}
-.fact span{font-family:var(--sans);font-size:13.5px;line-height:1.4;color:var(--muted);display:block;margin-top:2px}
-
-/* text */
-section{padding-block:30px}
-h2{font-family:var(--sans);font-weight:600;font-size:1.55rem;letter-spacing:-.01em;margin:1.6em 0 .5em;text-wrap:balance}
-h3{font-family:var(--sans);font-weight:600;font-size:1.06rem;margin:1.7em 0 .35em}
-p{margin:.7em 0}
-.note{font-family:var(--sans);font-size:13.5px;line-height:1.5;color:var(--muted)}
+/* sections */
+section{padding-block:26px}
+.band{background:var(--band);margin-inline:-20px;padding-inline:20px}
+h2{font-family:var(--title);font-weight:700;font-size:1.85rem;text-align:center;margin:1.1em 0 .7em;text-wrap:balance}
+h3{font-family:var(--title);font-weight:700;font-size:1.22rem;margin:1.9em 0 .4em}
+p{margin:.75em 0}
+.abstract p{text-align:justify;hyphens:auto}
+.tldr{font-size:1.12rem;text-align:center;max-width:760px;margin:6px auto 0;color:var(--ink)}
+ul{padding-left:1.2em}
+li{margin:.35em 0}
+.highlights{max-width:760px;margin:0 auto}
+.highlights li{margin:.55em 0}
+.note{font-size:14px;line-height:1.5;color:var(--muted);text-align:center}
 code,.num{font-family:var(--mono);font-size:.88em}
-ul{padding-left:1.15em}
-li{margin:.3em 0}
-.eq{font-family:var(--mono);font-size:14px;background:var(--surface);border:1px solid var(--rule);border-radius:4px;padding:10px 14px;overflow-x:auto;white-space:nowrap;margin:.9em 0}
+.eq{font-family:var(--mono);font-size:14px;background:var(--band);border-radius:6px;padding:12px 16px;overflow-x:auto;white-space:nowrap;margin:1em 0;text-align:center}
 
 /* figures */
-figure{margin:26px auto}
-figcaption{font-family:var(--sans);font-size:13.5px;line-height:1.5;color:var(--muted);margin:12px auto 0;max-width:calc(68ch * 17 / 13.5)}
-figcaption b{color:var(--ink);font-weight:600}
+figure{margin:28px auto}
+figcaption{font-size:14.5px;line-height:1.55;color:var(--muted);margin:12px auto 0;max-width:860px;text-align:center;text-wrap:pretty}
+figcaption b{color:var(--ink)}
 .scroll{overflow-x:auto}
-.slot{border:1.5px dashed var(--rule);border-radius:6px;min-height:170px;display:flex;flex-direction:column;justify-content:center;gap:6px;padding:22px;font-family:var(--sans);color:var(--muted);font-size:14px;background:repeating-linear-gradient(135deg,transparent 0 14px,var(--frozen-soft) 14px 15px)}
-.slot b{color:var(--ink);font-weight:600}
 .slots{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px}
+.slot{border:2px dashed var(--rule);border-radius:10px;min-height:190px;display:flex;flex-direction:column;justify-content:center;text-align:center;gap:6px;padding:24px;color:var(--muted);font-size:14.5px;background:var(--band)}
+.slot b{color:var(--ink)}
 
 /* tables */
-table{border-collapse:collapse;width:100%;font-family:var(--sans);font-size:14px;font-variant-numeric:tabular-nums;background:var(--surface)}
-.tw{border:1px solid var(--rule);border-radius:4px;overflow-x:auto;background:var(--surface)}
-th,td{padding:7px 12px;text-align:right;border-bottom:1px solid var(--rule);white-space:nowrap}
+.tw{overflow-x:auto}
+table{border-collapse:collapse;margin-inline:auto;font-size:14.5px;font-variant-numeric:tabular-nums;border-top:2px solid var(--ink);border-bottom:2px solid var(--ink);min-width:min(100%,720px)}
+th,td{padding:6px 14px;text-align:right;white-space:nowrap}
 th:first-child,td:first-child{text-align:left}
 td.l,th.l{text-align:left;white-space:normal}
-thead th{font-weight:600;font-size:12.5px;letter-spacing:.03em;text-transform:uppercase;color:var(--muted);background:var(--bg)}
+thead th{font-weight:700;border-bottom:1px solid var(--ink)}
+tbody td{border-bottom:1px solid var(--rule)}
 tbody tr:last-child td{border-bottom:0}
-tr.ours td{background:var(--ours-soft)}
-tr.ours td:first-child{font-weight:600}
-tr.grp td{font-size:12.5px;letter-spacing:.03em;text-transform:uppercase;color:var(--muted);background:var(--bg)}
-td.best{font-weight:600;color:var(--ours)}
-td.worse{color:var(--prior)}
+tr.ours td{background:var(--hl)}
+tr.ours td:first-child{font-weight:700}
+tr.grp td{font-style:italic;color:var(--muted);padding-top:10px}
+td.best{font-weight:700}
+td.worse{color:var(--muted);font-style:italic}
 
 /* diagram */
 svg text{font-family:var(--sans);fill:var(--ink)}
-svg .t{font-size:12.5px} svg .ts{font-size:11px;fill:var(--muted)} svg .th{font-size:13px;font-weight:600}
+svg .t{font-size:12.5px} svg .ts{font-size:11px;fill:var(--muted)} svg .th{font-size:13px;font-weight:700}
 svg .mono{font-family:var(--mono);font-size:11px;fill:var(--muted)}
-.bx{stroke-width:1.2;rx:4}
+.bx{stroke-width:1.2;rx:5}
 .f-frozen{fill:var(--frozen-soft);stroke:var(--frozen)} .f-tuned{fill:var(--tuned-soft);stroke:var(--tuned)}
 .f-ours{fill:var(--ours-soft);stroke:var(--ours)} .f-sensor{fill:var(--sensor-soft);stroke:var(--sensor)}
 .f-plain{fill:var(--surface);stroke:var(--frozen)} .f-fit{fill:var(--surface);stroke:var(--ink);stroke-dasharray:4 3}
@@ -112,42 +110,54 @@ svg .mono{font-family:var(--mono);font-size:11px;fill:var(--muted)}
 .gate{fill:var(--surface);stroke:var(--ours);stroke-width:1.5}
 .gdot{fill:var(--ours)}
 
-footer{border-top:1px solid var(--rule);margin-top:40px;padding-block:26px 50px;font-family:var(--sans);font-size:13.5px;color:var(--muted)}
-.refs{font-family:var(--sans);font-size:13.5px;line-height:1.5;padding-left:1.4em}
+.refs{font-size:14.5px;line-height:1.5;padding-left:1.5em}
 .refs li{margin:.45em 0}
-pre{font-family:var(--mono);font-size:12.5px;background:var(--surface);border:1px solid var(--rule);border-radius:4px;padding:12px 14px;overflow-x:auto}
+pre{font-family:var(--mono);font-size:13.5px;background:var(--band);border-radius:6px;padding:16px 18px;overflow-x:auto;line-height:1.5}
+footer{border-top:1px solid var(--rule);margin-top:36px;padding-block:26px 48px;font-size:14px;color:var(--muted);text-align:center}
 </style>
 </head>
 <body>
 
-<div class="bar"><nav aria-label="Sections">
-  <a class="name" href="#top">PromptMoGe</a>
-  <a href="#approach">Approach</a><a href="#training">Training</a><a href="#device">On device</a>
-  <a href="#results">Results</a><a href="#limits">Limitations</a><a href="#refs">References</a>
-</nav></div>
-
 <header class="hero wide" id="top">
-  <div class="kicker">Technical report · 2026</div>
-  <h1>PromptMoGe: metric geometry from one photo and a phone LiDAR, computed on the device</h1>
-  <p class="lede">We prompt the MoGe‑3 geometry foundation model with the coarse LiDAR depth that every iPhone Pro and iPad Pro already produces, and compress the result until the whole pipeline — a ViT‑L, a sparse 3‑D refiner and a robust metric fit — runs on an iPad in about 150&nbsp;ms.</p>
+  <h1>PromptMoGe<span class="sub">Metric Geometry from One Photo and a Phone LiDAR, Computed on the Device</span></h1>
   <p class="byline">Sergii Penner</p>
+  <p class="venue">Technical report, 2026</p>
   <div class="links">
-    <a href="https://github.com/sergmister/PromptMoGe">Code</a>
-    <a href="https://huggingface.co/sergmister/PromptMoGe">Weights &amp; iOS models</a>
+    <a href="https://github.com/sergmister/PromptMoGe"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 0a8 8 0 0 0-2.53 15.59c.4.07.55-.17.55-.38v-1.33c-2.23.48-2.7-1.07-2.7-1.07-.36-.93-.89-1.17-.89-1.17-.73-.5.06-.49.06-.49.8.06 1.23.83 1.23.83.71 1.22 1.87.87 2.33.66.07-.52.28-.87.5-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82a7.6 7.6 0 0 1 4 0c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.28.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48v2.2c0 .21.15.46.55.38A8 8 0 0 0 8 0z"/></svg>Code</a>
+    <a href="https://huggingface.co/sergmister/PromptMoGe">🤗 Weights</a>
     <a href="https://github.com/sergmister/PromptMoGe/tree/main/ios/PromptMoGeDemo">iOS demo</a>
-    <a class="soon" href="#visuals">Real-world captures — coming soon</a>
-  </div>
-  <div class="facts">
-    <div class="fact"><b>152 ms</b><span>Model A, 480×640 metric point map, end to end on an iPad Pro 11-inch (M5) (Model B: 129 ms)</span></div>
-    <div class="fact"><b>−25 %</b><span>thin-structure error against PromptDA‑L on 61 held-out rooms, at a third of its tokens</span></div>
-    <div class="fact"><b>61 / 61</b><span>rooms where it beats the calibrated LiDAR; −15 % error overall, −46 % against the raw sensor</span></div>
-    <div class="fact"><b>+0.4 %</b><span>accuracy cost of the on-device Model A relative to the full-size teacher</span></div>
+    <a class="soon" href="#visuals">Video (coming soon)</a>
   </div>
 </header>
 
 <main>
 <section class="col">
-  <h2>Summary</h2>
+  <p class="tldr"><b>TL;DR.</b> We prompt the MoGe‑3 geometry foundation model with the coarse LiDAR depth of an iPhone or iPad, and compress it until the whole pipeline — a ViT‑L, a sparse 3‑D refiner and a robust metric fit — runs on an iPad in about 150&nbsp;ms.</p>
+</section>
+
+<section class="wide" id="visuals">
+  <div class="slots">
+    <div class="slot"><b>Teaser</b>RGB, raw LiDAR, PromptDA‑L and PromptMoGe depth for one hand-held capture, with zoomed insets on thin structures.</div>
+    <div class="slot"><b>Point clouds</b>Orbiting point clouds from the demo app: raw LiDAR, Model A and Model B on the same frame.</div>
+    <div class="slot"><b>Reconstruction</b>A fused room scan from PromptMoGe depth beside the same scan fused from raw LiDAR.</div>
+  </div>
+  <p class="note" style="margin-top:12px">Real-world captures recorded with the demo app will be added here.</p>
+</section>
+
+<div class="band">
+<section class="col">
+  <h2>Highlights</h2>
+  <ul class="highlights">
+    <li><b>Real time on a tablet.</b> Model A produces a 480×640 metric point map in <b>152 ms</b> end to end on an iPad Pro 11-inch (M5); Model B produces 240×320 in <b>129 ms</b>.</li>
+    <li><b>Fine structure.</b> <b>25&nbsp;% lower error</b> on thin and nearby structures than PromptDA‑L on 61 held-out rooms, with a third of its image tokens.</li>
+    <li><b>Better than the sensor, everywhere.</b> 15&nbsp;% lower error than the calibrated LiDAR and 46&nbsp;% lower than the raw sensor, in <b>61 of 61</b> rooms.</li>
+    <li><b>Compression for free.</b> The on-device Model A is within <b>0.4&nbsp;%</b> of the full-size model and identical for 3‑D reconstruction.</li>
+  </ul>
+</section>
+</div>
+
+<section class="col abstract">
+  <h2>Abstract</h2>
   <p>Every recent iPhone Pro and iPad Pro carries two depth sensors that are good at opposite things. The LiDAR measures real distances, but only on a 256×192 grid, with a bias of a few percent that changes with distance, and it simply does not see thin objects such as chair legs or cables. The camera sees all of that detail, and a monocular geometry model such as MoGe‑3 can turn a single photo into remarkably crisp 3‑D shape — but it has to guess how large the scene is. On our ARKitScenes test frames MoGe‑3's own scale estimate is off by 14.8&nbsp;% on average, while the raw LiDAR is off by only 1.9&nbsp;%.</p>
   <p>PromptMoGe combines them. We feed the LiDAR depth and its confidence map into MoGe‑3 as a <em>prompt</em>, so the network can use the sensor wherever it is trustworthy and fall back on what it sees in the image wherever it is not. Three design decisions make this work. The backbone stays frozen and the prompt enters through gates that start at zero, so training begins from exactly MoGe‑3 and cannot easily destroy what it already knows. The network keeps predicting scale-free geometry, and we convert it to metres with a small closed-form fit to the sensor — which we call the <em>metric attachment</em> and describe in detail below. And MoGe‑3's sparse 3‑D refiner is told, at every step, where its current estimate disagrees with the sensor.</p>
   <p>Almost every one of these components exists because a simpler version failed in a way we could measure, and we report those failures alongside the results.</p>
@@ -155,17 +165,10 @@ pre{font-family:var(--mono);font-size:12.5px;background:var(--surface);border:1p
   <p>How does it compare with PromptDA‑L, the strongest published LiDAR-prompted depth model? We have tried to be careful here. As released, PromptDA‑L is less accurate than PromptMoGe on our benchmarks. But much of that gap comes from how the output is tied to the sensor rather than from the network: once PromptDA's output is given the same metric attachment as ours, overall accuracy is a statistical tie. What remains are two large and opposite differences. PromptMoGe is about 25&nbsp;% more accurate on thin and nearby structures; PromptDA is about 17&nbsp;% more accurate on the rare pixels where the LiDAR is confidently wrong, such as glass and mirrors. PromptMoGe gets there with 1&nbsp;200 image tokens instead of 3&nbsp;888, which is what makes running it on a tablet possible.</p>
 </section>
 
-<section class="wide" id="visuals">
-  <div class="slots">
-    <div class="slot"><b>Figure slot · teaser</b>RGB, raw LiDAR, PromptDA‑L and PromptMoGe depth for one hand-held capture, with zoomed insets on thin structures.</div>
-    <div class="slot"><b>Figure slot · point clouds</b>Orbiting point clouds from the demo app: raw LiDAR, Model A and Model B on the same frame.</div>
-    <div class="slot"><b>Figure slot · reconstruction</b>A fused room scan from PromptMoGe depth beside the same scan fused from raw LiDAR.</div>
-  </div>
-  <p class="note col" style="margin-top:12px">Real-world captures recorded with the demo app will be added here.</p>
-</section>
+
 
 <section class="col" id="approach">
-  <h2>Approach</h2>
+  <h2>Method</h2>
   <h3>Starting point: MoGe‑3</h3>
   <p>MoGe‑3 <a href="#r-moge3">[1]</a> takes one image and predicts, for every pixel, a point in 3‑D. It does not predict metric coordinates directly. Instead it predicts a viewing ray <span class="num">(x/z, y/z)</span> and a log‑depth <span class="num">log z</span> that is only defined up to a global scale and a shift along the viewing direction; this is called an <em>affine-invariant</em> point map, and it is what lets one model train on datasets with wildly different scales. The architecture has three parts. A DINOv2 ViT‑L/14 encoder turns a 420×560 image into a 30×40 grid of 1&nbsp;200 tokens. A convolutional neck without normalisation layers decodes those tokens over five levels, doubling the resolution each time until it reaches 480×640, and separate heads read out points, surface normals and a validity mask.</p>
   <p>The part that distinguishes MoGe‑3 from its predecessors is its refiner. A 2‑D decoder mixes features between pixels that are neighbours in the image, even when one lies on a chair leg and the other on the wall two metres behind it, and this is what blurs depth edges. MoGe‑3 instead lifts every pixel into a voxel at <span class="num">(row, column, round(256·log z))</span> and runs a sparse 3‑D U‑Net over the occupied voxels. Pixels that are far apart in depth land in different voxels and stop exchanging information, so the refiner can sharpen edges instead of smearing them. Each refinement step outputs a correction to log‑depth and leaves the viewing rays untouched.</p>
@@ -600,7 +603,7 @@ pre{font-family:var(--mono);font-size:12.5px;background:var(--surface);border:1p
     <li>R. Wang et al. <a href="https://arxiv.org/abs/2507.02546">MoGe‑2</a>. NeurIPS 2025. · M. Oquab et al. <a href="https://arxiv.org/abs/2304.07193">DINOv2</a>. TMLR 2024. · L. Yang et al. <a href="https://arxiv.org/abs/2406.09414">Depth Anything V2</a>. NeurIPS 2024.</li>
   </ol>
 
-  <h2>Citation</h2>
+  <h2>BibTeX</h2>
 <pre>@misc{promptmoge2026,
   title  = {PromptMoGe: LiDAR-Prompted Monocular Geometry on the Device},
   author = {Sergii Penner},
@@ -610,7 +613,7 @@ pre{font-family:var(--mono);font-size:12.5px;background:var(--surface);border:1p
 </section>
 </main>
 
-<footer class="wide">Code under the MIT licence. Built on MoGe (Microsoft, MIT) and DINOv2 (Meta AI, Apache 2.0). Evaluated on ARKitScenes, Hypersim, NYUv2, iBims‑1, DIODE, ETH3D, HAMMER and KITTI.</footer>
+<footer class="wide">Code released under the MIT licence. Built on MoGe (Microsoft, MIT) and DINOv2 (Meta AI, Apache 2.0). Evaluated on ARKitScenes, Hypersim, NYUv2, iBims‑1, DIODE, ETH3D, HAMMER and KITTI.</footer>
 
 <script>
 (function(){
