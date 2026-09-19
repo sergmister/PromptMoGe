@@ -1,7 +1,7 @@
 """Pure-PyTorch reimplementation of the FlexGEMM ops MoGe-3 needs.
 
-Upstream FlexGEMM (https://github.com/JeffreyXiang/FlexGEMM @ b2fadb2) is
-Triton/CUDA-only, so MoGe-3 cannot run on Apple silicon at all. This module is a
+Upstream FlexGEMM (https://github.com/JeffreyXiang/FlexGEMM) is Triton/CUDA-only, so
+without it MoGe-3's refiner cannot run on a CPU or on Apple silicon. This module is a
 *semantic* re-derivation of the four primitives the MoGe-3 refiner uses, written
 against the upstream source so it can serve as a numerical oracle:
 
@@ -49,71 +49,7 @@ __all__ = [
     "sparse_pool",
     "sparse_upsample",
     "make_conv_kernel_delta",
-    "STATS",
-    "QUANT",
 ]
-
-
-# --------------------------------------------------------------------------- #
-# Instrumentation: every primitive call is counted so Phase 1 can split the
-# refiner's time/FLOPs by level and by kernel without re-instrumenting MoGe.
-# --------------------------------------------------------------------------- #
-
-class _Stats:
-    def __init__(self) -> None:
-        self.enabled = False
-        self.records: list[dict[str, Any]] = []
-
-    def reset(self) -> None:
-        self.records = []
-
-    def add(self, **kw: Any) -> None:
-        if self.enabled:
-            self.records.append(kw)
-
-
-STATS = _Stats()
-
-
-class _Quant:
-    """Simulate the Metal kernel's int8 path inside the oracle.
-
-    The device kernel quantises activations per tensor (scale from a high percentile,
-    with saturation) and weights per output channel, accumulates in int32 and rescales.
-    A per-row or per-channel activation scale is not usable there -- the K reduction
-    sums neighbours gathered from different rows -- so this mirrors exactly that.
-
-    Accumulation is done in float64 here: the true int32 sums reach ~2e8, past fp32's
-    exact-integer range, so fp32 would add error the real kernel does not have.
-    """
-
-    def __init__(self) -> None:
-        self.enabled = False
-        self.act_percentile = 0.9999   # measured optimum, bench/int8_percentile_sweep.json
-        # Only quantise convolutions at or above this channel width. L2-L4 (C >= 128)
-        # carry 80% of the refiner's FLOPs, while the fine detail the SSR exists to
-        # recover lives at L0/L1 -- so this trades a little of the speedup for the
-        # part of the network the metric is most sensitive to.
-        self.min_channels = 0
-
-    def quantize_act(self, x: Tensor):
-        flat = x.detach().abs().flatten()
-        if flat.numel() > 2_000_000:                      # percentile on a sample
-            flat = flat[torch.randperm(flat.numel(), device=x.device)[:2_000_000]]
-        clip = torch.quantile(flat.float(), self.act_percentile).clamp_min(1e-8)
-        s = clip / 127.0
-        q = torch.clamp(torch.round(x.double() / s.double()), -127, 127)
-        return q, s.double()
-
-    def quantize_weight(self, w: Tensor):
-        # w is (Co, V, Ci); the scale is per output channel.
-        amax = w.detach().abs().amax(dim=(1, 2)).clamp_min(1e-8)
-        s = amax / 127.0
-        q = torch.clamp(torch.round(w.double() / s.double().view(-1, 1, 1)), -127, 127)
-        return q, s.double()
-
-
-QUANT = _Quant()
 
 
 def _broadcast(arg, D: int, name: str):
@@ -392,10 +328,6 @@ def build_submanifold_cache(
     else:
         nmap = _build_submanifold_nmap_sorted(coords, sparse_shape, kernel_delta)
         used = "sorted"
-    STATS.add(
-        op="build_submanifold_cache", backend=used, rows=int(coords.shape[0]),
-        V=int(kernel_delta.shape[0]), occupied=int((nmap >= 0).sum()),
-    )
     return NeighborCache(
         coords, coords, nmap=nmap, num_kernels=int(kernel_delta.shape[0]),
         kernel_size=tuple(kernel_size), dilation=dilation,
@@ -452,7 +384,6 @@ def build_pool_cache(
     seg_offsets = torch.zeros(num_out + 1, dtype=torch.int64, device=coords.device)
     seg_offsets[1:] = torch.cumsum(counts, 0)
 
-    STATS.add(op="build_pool_cache", rows_in=int(coords.shape[0]), rows_out=num_out)
     return NeighborCache(
         coords, out_coords,
         seg_indices=seg_indices, seg_offsets=seg_offsets, parent=inverse.to(torch.int32),
@@ -492,31 +423,10 @@ def submanifold_conv(
     V = int(nmap.shape[1])
     w = weight.reshape(Co, V, Ci)
 
-    if QUANT.enabled and Ci >= QUANT.min_channels:
-        fq, sa = QUANT.quantize_act(feats)
-        wq, sw = QUANT.quantize_weight(w)
-        acc = torch.zeros((M, Co), dtype=torch.float64, device=feats.device)
-        flops = 0
-        for v in range(V):
-            idx = nmap[:, v]
-            rows = (idx >= 0).nonzero(as_tuple=True)[0]
-            if rows.numel() == 0:
-                continue
-            src = idx[rows].to(torch.int64)
-            acc.index_add_(0, rows, fq.index_select(0, src) @ wq[:, v, :].t())
-            flops += 2 * int(rows.numel()) * Ci * Co
-        out = (acc * sa * sw.view(1, -1)).to(feats.dtype)
-        if bias is not None:
-            out += bias.to(out.dtype)
-        STATS.add(op="submanifold_conv", M=M, Ci=Ci, Co=Co, V=V, flops=flops,
-                  backend=neighbor_cache.build_backend, quant="int8")
-        return out, neighbor_cache
-
     out = feats.new_zeros((M, Co))
     if bias is not None:
         out += bias.to(out.dtype)
 
-    flops = 0
     for v in range(V):
         idx = nmap[:, v]
         valid = idx >= 0
@@ -527,10 +437,7 @@ def submanifold_conv(
         src = idx[rows].to(torch.int64)
         contrib = feats.index_select(0, src) @ w[:, v, :].t()
         out.index_add_(0, rows, contrib.to(out.dtype))
-        flops += 2 * n * Ci * Co
 
-    STATS.add(op="submanifold_conv", M=M, Ci=Ci, Co=Co, V=V, flops=flops,
-              backend=neighbor_cache.build_backend)
     return out, neighbor_cache
 
 
@@ -571,7 +478,6 @@ def sparse_pool(
         raise NotImplementedError(f"reduce={reduce!r} not needed by MoGe")
 
     out_shape = torch.Size([*neighbor_cache.output_sparse_shape, C])
-    STATS.add(op="sparse_pool", rows_in=int(feats.shape[0]), rows_out=num_out, C=C)
     return acc, out_coords, out_shape, neighbor_cache
 
 
@@ -596,6 +502,4 @@ def sparse_upsample(
     assert parent.shape[0] == output_coords.shape[0]
     out = feats.index_select(0, parent)
     out_shape = torch.Size([*tuple(output_shape[: output_coords.shape[1]]), feats.shape[1]])
-    STATS.add(op="sparse_upsample", rows_in=int(feats.shape[0]), rows_out=int(out.shape[0]),
-              C=int(feats.shape[1]))
     return out, output_coords, out_shape, neighbor_cache
