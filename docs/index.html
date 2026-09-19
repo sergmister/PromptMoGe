@@ -53,6 +53,7 @@ header.hero{padding-block:56px 28px}
 .kicker{font-family:var(--mono);font-size:12.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
 h1{font-family:var(--sans);font-weight:600;font-size:clamp(2rem,4.6vw,3.1rem);line-height:1.08;letter-spacing:-.015em;margin:.35em 0 .4em;text-wrap:balance}
 .lede{font-size:1.18rem;line-height:1.5;max-width:60ch;margin:0 0 22px}
+.byline{font-family:var(--sans);font-size:15px;font-weight:500;margin:0 0 20px}
 .links{display:flex;gap:10px;flex-wrap:wrap;font-family:var(--sans);font-size:14.5px}
 .links a{border:1px solid var(--rule);background:var(--surface);color:var(--ink);padding:7px 14px;border-radius:4px;text-decoration:none}
 .links a:hover{border-color:var(--ours)}
@@ -129,7 +130,7 @@ pre{font-family:var(--mono);font-size:12.5px;background:var(--surface);border:1p
   <div class="kicker">Technical report · 2026</div>
   <h1>PromptMoGe: metric geometry from one photo and a phone LiDAR, computed on the device</h1>
   <p class="lede">We prompt the MoGe‑3 geometry foundation model with the coarse LiDAR depth that every iPhone Pro and iPad Pro already produces, and compress the result until the whole pipeline — a ViT‑L, a sparse 3‑D refiner and a robust metric fit — runs on an iPad in about 150&nbsp;ms.</p>
-  <!-- Authors and affiliations go here. -->
+  <p class="byline">Sergii Penner</p>
   <div class="links">
     <a href="https://github.com/sergmister/PromptMoGe">Code</a>
     <a href="https://huggingface.co/sergmister/PromptMoGe">Weights &amp; iOS models</a>
@@ -543,7 +544,7 @@ pre{font-family:var(--mono);font-size:12.5px;background:var(--surface);border:1p
   <h2>Citation</h2>
 <pre>@misc{promptmoge2026,
   title  = {PromptMoGe: LiDAR-Prompted Monocular Geometry on the Device},
-  author = {The PromptMoGe authors},
+  author = {Sergii Penner},
   year   = {2026},
   url    = {https://github.com/sergmister/PromptMoGe}
 }</pre>

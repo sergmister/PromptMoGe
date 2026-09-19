@@ -8,6 +8,7 @@ version = "1.0.0"
 description = "LiDAR-prompted MoGe-3: metric depth from RGB + a phone LiDAR, with two real-time on-device models"
 readme = "README.md"
 license = { text = "MIT" }
+authors = [{ name = "Sergii Penner" }]
 requires-python = ">=3.10"
 dependencies = ["torch>=2.4", "numpy", "scipy", "opencv-python", "pillow", "huggingface_hub", "utils3d_moge @ git+https://github.com/EasternJournalist/utils3d-moge.git@62f09d58509485564e24d5d9f6aac9ee9ebc0c37"]
 
