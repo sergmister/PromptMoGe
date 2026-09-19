@@ -1,0 +1,19 @@
+__pycache__/
+*.egg-info/
+.venv/
+.DS_Store
+# weights, exports and data never go into git
+*.pt
+*.ckpt
+*.bin
+*.mlpackage/
+*.mlmodelc/
+ios/models/
+checkpoints/
+runs/
+data/
+out/
+# Xcode
+xcuserdata/
+*.xcworkspace/
+DerivedData/
