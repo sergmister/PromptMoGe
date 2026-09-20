@@ -25,6 +25,8 @@ final class ScanState: ObservableObject {
     @Published var edgeReject: Float = 0.03
     @Published var useMask = true
     @Published var ready = false
+    /// Folder under Documents/captures that holds the current capture's images and maps.
+    @Published var savedAs: String?
 
     let capture = LiDARCapture()
     let renderer: PointCloudRenderer? = MTLCreateSystemDefaultDevice().flatMap { PointCloudRenderer(device: $0) }
@@ -73,6 +75,7 @@ final class ScanState: ObservableObject {
         Task.detached(priority: .userInitiated) { [weak self] in
             guard let self else { return }
             var clouds: [DepthSource: PointCloud] = [.lidar: Self.sensorCloud(f)]
+            var store = CaptureStore(frame: f)
             var timings: [DepthSource: Double] = [:]
             for (pipe, sources, name) in pipelines {
                 let t0 = CFAbsoluteTimeGetCurrent()
@@ -90,6 +93,7 @@ final class ScanState: ObservableObject {
                 }
                 guard ok else { Log.write("Model \(name) FAILED"); continue }
                 results.append((pipe.logz, pipe.metricScale, pipe.metricShift, CFAbsoluteTimeGetCurrent() - t0 - overhead))
+                store?.add(model: name, pipe: pipe, results: zip([0, 1, 3], results).map { ($0, $1.logz, $1.s, $1.t, $1.seconds) })
                 let template = Self.modelCloud(f, pipe)
                 for (source, r) in zip(sources, results) {
                     var c = template
@@ -105,9 +109,11 @@ final class ScanState: ObservableObject {
                           + " | " + pipe.stages.map { String(format: "%@ %.1f", $0.0, $0.1) }.joined(separator: ", ")
                           + String(format: " | metric s %.4f t %.4f, filled %d px", pipe.metricScale, pipe.metricShift, pipe.filledPixels))
             }
-            let (c, t) = (clouds, timings)
+            store?.finish()
+            Log.write("saved " + (store.map { "captures/" + $0.dir.lastPathComponent } ?? "FAILED"))
+            let (c, t, saved) = (clouds, timings, store?.dir.lastPathComponent)
             await MainActor.run {
-                self.clouds = c; self.timings = t
+                self.clouds = c; self.timings = t; self.savedAs = saved
                 self.show(c[self.source] != nil ? self.source : .lidar, resetView: true)
                 self.phase = .viewing
             }
@@ -251,6 +257,10 @@ struct ScanView: View {
                     }
                     Text("\(st.visible) pts").font(.caption2.monospaced()).foregroundStyle(.white.opacity(0.6))
                 }.padding(.horizontal)
+                if let saved = st.savedAs {
+                    Text("saved to captures/\(saved)").font(.caption2.monospaced()).foregroundStyle(.white.opacity(0.6))
+                        .frame(maxWidth: .infinity, alignment: .trailing).padding(.horizontal)
+                }
 
                 Picker("Source", selection: Binding(get: { st.source }, set: { st.show($0) })) {
                     ForEach(DepthSource.allCases.filter(st.available)) { Text($0.rawValue).tag($0) }

@@ -99,6 +99,10 @@ open ios/PromptMoGeDemo/PromptMoGeDemo.xcodeproj                      # set your
 ios/push_models.sh <device-id>                                        # copies ios/models into the app's Documents
 ```
 
+Every capture is saved on the device under `Documents/captures/<timestamp>/`: the camera frame, the raw LiDAR depth and
+confidence, and each model's depth after K = 0, 1 and 3 with its mask and rays. `ios/pull_captures.sh <device-id>` copies
+them off, and `python ios/read_capture.py <capture> --export out/` turns one into PNGs and point clouds.
+
 To check an export on the device against PyTorch, write a reference with
 `python -m promptmoge.export.selftest --image … --depth … --conf …`, push, and put a file `SELFTEST` containing `1`
 into the app's Documents: the app then reports per-step depth error and warm latency instead of opening the camera.
