@@ -13,7 +13,7 @@ Core ML, the sparse 3-D refiner on custom int8 Metal kernels.
 | **Model A** | 480×640 | int8 | **152 ms** |
 | **Model B** | 240×320 | int8 | **129 ms** |
 
-A web report with the method, architecture diagram and all benchmark results is in [`docs/index.html`](docs/index.html).
+**[Project page](https://sergmister.github.io/PromptMoGe/)** — method, architecture diagram and all benchmark results.
 Latencies are measured on an iPad Pro 11-inch (M5) (iPad17,1, iOS 27 beta), warm, one refinement step.
 *Real-world captures coming soon.*
 
