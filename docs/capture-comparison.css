@@ -1,0 +1,28 @@
+/* One captured frame, three depth sources, and linked point-cloud cameras. */
+.capture-figure{margin:0 auto}
+.capture-scroll{overflow-x:auto;padding-bottom:2px}
+.capture-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px 16px}
+.capture-grid figure{margin:0;min-width:0}
+.capture-grid h3{margin:0 0 9px;text-align:center;font-size:1.04rem;line-height:1.4}
+.capture-grid .capture-ours h3{color:var(--ours)}
+.capture-depth{display:block;width:100%;height:auto;aspect-ratio:4/3;object-fit:contain;background:#080b10;border:1px solid var(--rule);border-radius:6px}
+.capture-depth.sensor{image-rendering:pixelated}
+.capture-cloud{position:relative;background:#080b10;border:1px solid var(--rule);border-radius:6px;overflow:hidden;aspect-ratio:4/3}
+.capture-cloud canvas{display:block;width:100%;height:100%;cursor:grab;touch-action:none}
+.capture-cloud canvas:active{cursor:grabbing}
+.capture-cloud canvas:focus-visible{outline:3px solid var(--link);outline-offset:-3px}
+.capture-cloud-status{position:absolute;bottom:7px;left:9px;right:9px;color:#d7e2ef;font:11px/1.4 var(--mono);pointer-events:none;text-shadow:0 1px 3px #000;background:#080b1099;border-radius:3px;padding:3px 5px}
+.capture-toolbar{display:flex;justify-content:center;align-items:center;flex-wrap:wrap;gap:12px 22px;margin:15px 0 8px;font-size:14px}
+.capture-toolbar label{display:flex;align-items:center;gap:8px}
+.capture-toolbar select,.capture-toolbar button{font:inherit;color:var(--ink);background:var(--surface);border:1px solid var(--rule);border-radius:5px;padding:5px 10px}
+.capture-toolbar button{cursor:pointer}
+.capture-toolbar input{width:80px;accent-color:var(--ours)}
+.capture-toolbar :focus-visible{outline:2px solid var(--link);outline-offset:2px}
+.capture-legend{display:flex;align-items:center;justify-content:center;gap:9px;margin:12px auto 15px;font-size:12px;color:var(--muted)}
+.capture-legend-bar{width:190px;height:8px;border-radius:2px;background:linear-gradient(to right,#30123b,#466be3,#28bbec,#32f298,#a4fc3b,#e6bc35,#f66b19,#b91e08,#7a0403)}
+.capture-help{font-size:12px;color:var(--muted);text-align:center;margin:6px 0}
+.capture-figure figcaption{margin-top:13px}
+.capture-notes{max-width:860px;margin:12px auto 0;font-size:13px;color:var(--muted);line-height:1.6}
+.capture-notes summary{text-align:center;cursor:pointer}
+.capture-notes p{margin:8px 0}
+@media(max-width:680px){.capture-grid{min-width:650px;gap:10px}.capture-toolbar{gap:10px 16px}.capture-grid h3{font-size:14px}.capture-help{font-size:12px}}

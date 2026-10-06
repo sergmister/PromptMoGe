@@ -7,6 +7,8 @@
 <meta name="description" content="Metric depth from one RGB frame and a phone LiDAR: LiDAR-prompted MoGe-3, compressed to run end to end on an iPad.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;700&family=Noto+Sans:ital,wght@0,400;0,500;0,700;1,400&display=swap">
+<link rel="stylesheet" href="capture-comparison.css">
+<script defer src="capture-comparison.js"></script>
 <style>
 :root{
   --bg:#FFFFFF; --band:#F6F7F9; --surface:#FFFFFF; --ink:#2B2F36; --muted:#6B727C; --rule:#E1E4E8; --link:#2A6FDB;
@@ -129,13 +131,51 @@ footer{border-top:1px solid var(--rule);margin-top:36px;padding-block:26px 48px;
 </header>
 
 <main>
-<section class="wide" id="visuals">
-  <div class="slots">
-    <div class="slot"><b>Teaser</b>RGB, raw LiDAR, PromptDA‑L and PromptMoGe depth for one hand-held capture, with zoomed insets on thin structures.</div>
-    <div class="slot"><b>Point clouds</b>Orbiting point clouds from the demo app: raw LiDAR, Model A and Model B on the same frame.</div>
-    <div class="slot"><b>Reconstruction</b>A fused room scan from PromptMoGe depth beside the same scan fused from raw LiDAR.</div>
-  </div>
-  <p class="note" style="margin-top:12px">Real-world captures recorded with the demo app will be added here.</p>
+<section class="wide" id="visuals" aria-label="Depth and point cloud comparison">
+  <figure class="capture-figure" data-capture="20261006_080232_661">
+    <div class="capture-scroll">
+      <div class="capture-grid">
+        <figure>
+          <h3>ARKit / LiDAR</h3>
+          <img class="capture-depth sensor" src="assets/capture-20261006-080232/arkit-depth.png" width="320" height="240" alt="Raw LiDAR depth of a staircase; thin railing bars are incompletely resolved.">
+        </figure>
+        <figure class="capture-ours">
+          <h3>PromptMoGe A · K=3</h3>
+          <img class="capture-depth" src="assets/capture-20261006-080232/promptmoge-a-k3-depth.png" width="640" height="480" alt="PromptMoGe A depth after three refinement steps on the same staircase capture.">
+        </figure>
+        <figure>
+          <h3>PromptDA-L</h3>
+          <img class="capture-depth" src="assets/capture-20261006-080232/promptda-depth.png" width="1008" height="756" alt="PromptDA-L depth on the same staircase capture.">
+        </figure>
+        <div class="capture-cloud" data-source="arkit">
+          <canvas tabindex="0" role="img" aria-label="Interactive ARKit raw LiDAR point cloud. Drag to orbit, shift-drag to pan, scroll to zoom. All three views are linked."></canvas>
+          <span class="capture-cloud-status" role="status">Loading LiDAR point cloud…</span>
+        </div>
+        <div class="capture-cloud" data-source="promptmoge-a-k3">
+          <canvas tabindex="0" role="img" aria-label="Interactive PromptMoGe A K=3 point cloud. Drag to orbit, shift-drag to pan, scroll to zoom. All three views are linked."></canvas>
+          <span class="capture-cloud-status" role="status">Loading PromptMoGe point cloud…</span>
+        </div>
+        <div class="capture-cloud" data-source="promptda">
+          <canvas tabindex="0" role="img" aria-label="Interactive PromptDA-L point cloud. Drag to orbit, shift-drag to pan, scroll to zoom. All three views are linked."></canvas>
+          <span class="capture-cloud-status" role="status">Loading PromptDA point cloud…</span>
+        </div>
+      </div>
+    </div>
+    <div class="capture-legend" aria-label="Shared depth color scale from zero to six metres"><span>0 m · near</span><span class="capture-legend-bar"></span><span>6 m · far</span></div>
+    <div class="capture-toolbar">
+      <label>Point cloud color <select id="capture-color"><option value="rgb">RGB</option><option value="depth">Depth</option></select></label>
+      <label>Point size <input id="capture-point-size" type="range" min="1" max="5" step="0.5" value="2"></label>
+      <button id="capture-reset" type="button">Reset view</button>
+    </div>
+    <p class="capture-help">All three views are linked. Drag to orbit · Shift-drag to pan · Scroll to zoom · Touch: pinch to zoom</p>
+    <p class="capture-help">Keyboard: arrow keys to orbit, +/− to zoom, R to reset.</p>
+    <figcaption><b>One frame, three depth sources.</b> Depth maps above; interactive RGB point clouds below. Captured on an iPad Pro on October 6, 2026 at 8:02:32 AM PDT. All depth maps use the same scale; black indicates missing or masked depth.</figcaption>
+    <details class="capture-notes"><summary>Capture and comparison details</summary>
+      <p>The ARKit / LiDAR column shows the demo app’s saved raw AVFoundation LiDAR return, not ARKit’s processed <code>sceneDepth</code>. PromptMoGe A K=3 uses the saved on-device result and validity mask. PromptDA-L was run on the same RGB frame at 1008×756, prompted by the same sensor depth with missing returns filled from their nearest valid neighbour.</p>
+      <p>Point clouds use the saved camera intrinsics, scaled to each depth map, and colors from the same RGB frame. Grids are uniformly sampled to fewer than 100,000 points per source. No additional edge filter is applied. This is a visual comparison, not a ground-truth accuracy evaluation. Capture: <code>20261006_080232_661</code>.</p>
+    </details>
+    <noscript><p class="note">Enable JavaScript to interact with the point clouds. The depth maps remain available above.</p></noscript>
+  </figure>
 </section>
 
 <div class="band">

@@ -1,0 +1,70 @@
+{
+  "capture": "20261006_080232_661",
+  "date": "2026-10-06T15:02:32Z",
+  "depth_range_m": [
+    0,
+    6
+  ],
+  "camera_intrinsics": [
+    [
+      1859.1207,
+      0,
+      1110.7948
+    ],
+    [
+      0,
+      1859.1207,
+      838.17993
+    ],
+    [
+      0,
+      0,
+      1
+    ]
+  ],
+  "image_hw": [
+    1674,
+    2232
+  ],
+  "point_encoding": "uint32 little-endian count; records: int16 little-endian XYZ millimetres, uint8 RGB (9 bytes per point)",
+  "point_coordinates": "+X right, +Y up, -Z forward; camera-intrinsic back-projection",
+  "promptda": {
+    "model": "PromptDA-L",
+    "input_hw": [
+      756,
+      1008
+    ],
+    "prompt": "Saved LiDAR depth with Euclidean-nearest fill of missing returns"
+  },
+  "sources": {
+    "arkit": {
+      "depth_hw": [
+        240,
+        320
+      ],
+      "sample_step": 1,
+      "points": 76047,
+      "sha256": "15f367dfb56890099b5cb6d8f25287e4b28c27ea4d76b74b1d835053d0b4b7c7"
+    },
+    "promptmoge-a-k3": {
+      "depth_hw": [
+        480,
+        640
+      ],
+      "sample_step": 2,
+      "points": 76800,
+      "sha256": "554b7c407e7f1c5d8210a6a837a3129993233e7dd14deda614cdd43e3023c604"
+    },
+    "promptda": {
+      "depth_hw": [
+        756,
+        1008
+      ],
+      "sample_step": 3,
+      "points": 84672,
+      "sha256": "284a7a441a812c8f498a59e4c5c8022488649d337f338a27292ee9924a123888"
+    }
+  },
+  "orbit_distance_m": 3.220703125,
+  "focal_y_normalized": 2.2211716845878136
+}
